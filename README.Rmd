@@ -1,0 +1,110 @@
+---
+output: github_document
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "README-"
+)
+```
+
+# R/`intermed`
+
+[![Travis-CI Build Status](https://travis-ci.org/benkeser/intermed.svg?branch=master)](https://travis-ci.org/benkeser/intermed)
+[![AppVeyor Build  Status](https://ci.appveyor.com/api/projects/status/github/benkeser/intermed?branch=master&svg=true)](https://ci.appveyor.com/project/benkeser/intermed)
+[![Coverage Status](https://img.shields.io/codecov/c/github/benkeser/intermed/master.svg)](https://codecov.io/github/benkeser/intermed?branch=master)
+[![CRAN](http://www.r-pkg.org/badges/version/intermed)](http://www.r-pkg.org/pkg/intermed)
+[![CRAN downloads](https://cranlogs.r-pkg.org/badges/intermed)](https://CRAN.R-project.org/package=intermed)
+[![Project Status: Active - The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
+[![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
+[![DOI](https://zenodo.org/badge/75324341.svg)](https://zenodo.org/badge/latestdoi/75324341)
+
+> Nonparametric estimators of mediation effects with multiple mediators
+
+__Author:__ [David Benkeser](https://www.benkeserstatistics.com/)
+
+---
+
+## Description
+
+`intermed` is an R package that computes interventional mediation effects for two
+mediators, as introduced in...
+
+---
+
+## Installation
+
+Install the current stable release from
+[CRAN](https://cran.r-project.org/) via
+
+```{r cran-installation, eval = FALSE}
+install.packages("intermed")
+```
+
+A developmental release may be installed from GitHub via
+[`devtools`](https://www.rstudio.com/products/rpackages/devtools/) with:
+
+```{r gh-installation, eval = FALSE}
+devtools::install_github("benkeser/intermed")
+```
+
+---
+
+## Usage
+
+Coming soon... 
+
+---
+
+## Issues
+
+If you encounter any bugs or have any specific feature requests, please [file an
+issue](https://github.com/benkeser/intermed/issues).
+
+---
+
+## Citation
+
+After using the `intermed` R package, please cite the following:
+
+    @Manual{intermedpackage,
+      title = {intermed: Nonparametric Inference on Interventional Mediation Effects},
+      author = {David Benkeser},
+      note = {R package version 1.0.0},
+      doi = {10.5281/zenodo.844836}
+    }
+
+---
+
+## License
+
+&copy; 2016-2017 [David C. Benkeser](http://www.benkeserstatistics.com)
+
+The contents of this repository are distributed under the MIT license. See
+below for details:
+```
+The MIT License (MIT)
+
+Copyright (c) 2016-2019 David C. Benkeser
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
