@@ -10,7 +10,8 @@ and Qbar_a_star with respect to the joint distribution of M1 and M2 given C and 
 We can then define a submodel through this conditional mean difference (which is 
 exactly the conditional direct effect) and target this quantity directly.}
 \usage{
-target_conditional_direct_effect(Qbarbar, Qbar, Y, A, a, a_star, ...)
+target_conditional_direct_effect(Qbarbar, all_mediator_values, gn, Qbar, Y,
+  A, a, a_star, M1, M2, ...)
 }
 \arguments{
 \item{Y}{The outcome}

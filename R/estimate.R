@@ -24,12 +24,12 @@
 #'  missing 1 if observed).
 #' @param DeltaA Indicator of missing treatment (assumed to be equal to 0 if
 #'  missing 1 if observed).
-#' @param SL_Q A vector of characters or a list describing the Super Learner
+#' @param SL_Qbar A vector of characters or a list describing the Super Learner
 #'  library to be used for the outcome regression.
 #' @param verbose A boolean indicating whether to print status updates.
 #' @param return_models A boolean indicating whether to return model fits for the
 #'  outcome regression, propensity score, and reduced-dimension regressions.
-#' @param glm_Q A character describing a formula to be used in the call to
+#' @param glm_Qbar A character describing a formula to be used in the call to
 #'  \code{glm} for the outcome regression.
 #' @param a_0 A list of fixed treatment values
 #' @param family A character passed to \code{SuperLearner}
@@ -43,18 +43,18 @@
 #' @importFrom SuperLearner SuperLearner trimLogit
 #' @importFrom stats predict glm as.formula
 #
-estimate_Qbar <- function(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Q, glm_Q = NULL, a_0, stratify,
+estimate_Qbar <- function(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Qbar, glm_Qbar = NULL, a_0, stratify,
                       family, verbose = FALSE, return_models = FALSE,
-                      valid_rows, ...) {
-  if (is.null(SL_Q) & is.null(glm_Q)) {
+                      valid_rows, all_mediator_values, ...) {
+  if (is.null(SL_Qbar) & is.null(glm_Qbar)) {
     stop("Specify Super Learner library or GLM formula for Q")
   }
-  if (!is.null(SL_Q) & !is.null(glm_Q)) {
+  if (!is.null(SL_Qbar) & !is.null(glm_Qbar)) {
     warning(paste0(
       "Super Learner library and GLM formula specified.",
       " Proceeding with Super Learner only."
     ))
-    glm_Q <- NULL
+    glm_Qbar <- NULL
   }
   # subset data into training and validation sets
   if (length(valid_rows) != length(Y)) {
@@ -88,13 +88,13 @@ estimate_Qbar <- function(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Q, glm_Q = NULL, a
   include <- (trainDeltaA == 1) & (trainDeltaM == 1)
 
   # Super Learner
-  if (!is.null(SL_Q)) {
+  if (!is.null(SL_Qbar)) {
     if (!stratify) {
-      if (length(SL_Q) > 1 | is.list(SL_Q)) {
+      if (length(SL_Qbar) > 1 | is.list(SL_Qbar)) {
         fm <- SuperLearner::SuperLearner(
           Y = trainY[include],
           X = data.frame(A = trainA, trainC, M1 = trainM1, M2 = trainM2)[include, , drop = FALSE],
-          verbose = verbose, family = family, SL.library = SL_Q,
+          verbose = verbose, family = family, SL.library = SL_Qbar,
           method = if(family$family == "binomial"){
             drtmle:::tmp_method.CC_nloglik()
           }else{
@@ -121,8 +121,8 @@ estimate_Qbar <- function(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Q, glm_Q = NULL, a
             which_M2_obs = idx_M2, which_M1_M2_obs = idx_M1_M2
           )          
         }    
-      } else if (length(SL_Q) == 1) {
-        fm <- do.call(SL_Q, args = list(
+      } else if (length(SL_Qbar) == 1) {
+        fm <- do.call(SL_Qbar, args = list(
           Y = trainY[include],
           X = data.frame(A = trainA, trainC, M1 = trainM1, M2 = trainM2)[include, , drop = FALSE],
           verbose = verbose, newX = data.frame(A = validA, validC, M1 = validM1, M2 = validM2),
@@ -146,7 +146,7 @@ estimate_Qbar <- function(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Q, glm_Q = NULL, a
         }
       }
     } else { # stratified regressions
-      if (length(SL_Q) > 1 | is.list(SL_Q)) {
+      if (length(SL_Qbar) > 1 | is.list(SL_Qbar)) {
         Qbar_list <- vector(mode = "list", length = valid_n)        
         fm <- sapply(a_0, function(x) {
           include2 <- trainA == x
@@ -157,7 +157,7 @@ estimate_Qbar <- function(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Q, glm_Q = NULL, a
             X = data.frame(trainC, M1 = trainM1, M2 = trainM2)[include2 & include, , drop = FALSE],
             newX = data.frame(validC, M1 = validM1, M2 = validM2), 
             verbose = verbose, family = family,
-            SL.library = SL_Q, method = if(family$family ==
+            SL.library = SL_Qbar, method = if(family$family ==
               "binomial"){
               tmp_method.CC_nloglik()
               }else{
@@ -177,16 +177,16 @@ estimate_Qbar <- function(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Q, glm_Q = NULL, a
                                                                                     M2 = all_mediator_values$M2))
           Qbar_list[[i]]$which_M1_obs <- which(all_mediator_values$M1 == validM1[i])
           Qbar_list[[i]]$which_M2_obs <- which(all_mediator_values$M2 == validM2[i])
-          Qbar_list[[i]]$which_M1_M2_obs <- intersect(idx_M1, idx_M2)
+          Qbar_list[[i]]$which_M1_M2_obs <- intersect(Qbar_list[[i]]$which_M1_obs, Qbar_list[[i]]$which_M2_obs)        
         }
-      } else if (length(SL_Q) == 1) {
+      } else if (length(SL_Qbar) == 1) {
         Qbar_list <- vector(mode = "list", length = valid_n)        
         fm <- sapply(a_0, function(x) {
           include2 <- trainA == x
           # handle NAs properly
           include2[is.na(include2)] <- FALSE
           # call function
-          fm <- do.call(SL_Q, args = list(
+          fm <- do.call(SL_Qbar, args = list(
             Y = trainY[include2 & include],
             X = data.frame(trainC, M1 = trainM1, M2 = trainM2)[include2 & include, , drop = FALSE],
             newX = data.frame(validC, M1 = validM1, M2 = validM2), verbose = verbose,
@@ -207,17 +207,17 @@ estimate_Qbar <- function(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Q, glm_Q = NULL, a
                                                                                 M2 = all_mediator_values$M2))
           Qbar_list[[i]]$which_M1_obs <- which(all_mediator_values$M1 == validM1[i])
           Qbar_list[[i]]$which_M2_obs <- which(all_mediator_values$M2 == validM2[i])
-          Qbar_list[[i]]$which_M1_M2_obs <- intersect(idx_M1, idx_M2)        
+          Qbar_list[[i]]$which_M1_M2_obs <- intersect(Qbar_list[[i]]$which_M1_obs, Qbar_list[[i]]$which_M2_obs)        
         }
       } # end else if length(SL_Q) == 1
     } # end stratify
   } # end super learner
 
   # GLM
-  if (!is.null(glm_Q)) {
+  if (!is.null(glm_Qbar)) {
     if (!stratify) {
       fm <- stats::glm(
-        stats::as.formula(paste0("Y~", glm_Q)),
+        stats::as.formula(paste0("Y~", glm_Qbar)),
         data = data.frame(Y = trainY, A = trainA, trainC, M1 = trainM1, M2 = trainM2)[
           include, ,
           drop = FALSE
@@ -231,14 +231,14 @@ estimate_Qbar <- function(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Q, glm_Q = NULL, a
         Qbar_list[[i]]$Qbar_a_0 <- sapply(a_0, function(a, fm) {
           stats::predict(
             fm,
-            newdata = data.frame(A = a, validC[i, , drop = FALSE], M1 = all_mediator_values$M1,
-                                 M2 = all_mediator_values$M2),
+            newdata = suppressWarnings(data.frame(A = a, validC[i, , drop = FALSE], M1 = all_mediator_values$M1,
+                                 M2 = all_mediator_values$M2)),
             type = "response"
           )
         }, fm = fm, simplify = FALSE)
         Qbar_list[[i]]$which_M1_obs <- which(all_mediator_values$M1 == validM1[i])
         Qbar_list[[i]]$which_M2_obs <- which(all_mediator_values$M2 == validM2[i])
-        Qbar_list[[i]]$which_M1_M2_obs <- intersect(idx_M1, idx_M2)  
+        Qbar_list[[i]]$which_M1_M2_obs <- intersect(Qbar_list[[i]]$which_M1_obs, Qbar_list[[i]]$which_M2_obs)        
       }
     } else {
       fm <- sapply(a_0, function(a) {
@@ -247,14 +247,14 @@ estimate_Qbar <- function(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Q, glm_Q = NULL, a
         include2[is.na(include2)] <- FALSE
         fm <- stats::glm(
           stats::as.formula(paste0(
-            "trainY[include2 & include] ~ ", glm_Q
+            "trainY[include2 & include] ~ ", glm_Qbar
           )),
           data = trainC[include2 & include, , drop = FALSE],
           family = family
         )
         return(fm)
       }, simplify = FALSE)
-      Qbar_list <- vector(mode = "list", length = valid_n)        
+      Qbar_list <- vector(mode = "list", length = valid_n)      
       for(i in seq_len(valid_n)){
         Qbar_list[[i]] <- vector(mode = "list", length = 4)
         names(Qbar_list[[i]]) <- c("Qbar_a_0", "which_M1_obs",
@@ -262,14 +262,14 @@ estimate_Qbar <- function(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Q, glm_Q = NULL, a
         Qbar_list[[i]]$Qbar_a_0 <- lapply(fm, function(fm) {
           stats::predict(
             fm,
-            newdata = data.frame(validC[i, , drop = FALSE], M1 = all_mediator_values$M1,
-                                 M2 = all_mediator_values$M2),
+            newdata = suppressWarnings(data.frame(validC[i, , drop = FALSE], M1 = all_mediator_values$M1,
+                                 M2 = all_mediator_values$M2)),
             type = "response"
           )
         }, fm = fm, simplify = FALSE)
         Qbar_list[[i]]$which_M1_obs <- which(all_mediator_values$M1 == validM1[i])
         Qbar_list[[i]]$which_M2_obs <- which(all_mediator_values$M2 == validM2[i])
-        Qbar_list[[i]]$which_M1_M2_obs <- intersect(idx_M1, idx_M2)  
+        Qbar_list[[i]]$which_M1_M2_obs <- intersect(Qbar_list[[i]]$which_M1_obs, Qbar_list[[i]]$which_M2_obs)        
       }
     }
   }
@@ -443,10 +443,10 @@ reorder_list <- function(a_list,
 estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a_0, stratify,
                       verbose = FALSE, return_models = FALSE,
                       valid_rows, all_mediator_values, ...) {
-  if (is.null(SL_Q) & is.null(glm_Q_M)) {
+  if (is.null(SL_Q_M) & is.null(glm_Q_M)) {
     stop("Specify Super Learner library or GLM formula for Q_M")
   }
-  if (!is.null(SL_Q) & !is.null(glm_Q_M)) {
+  if (!is.null(SL_Q_M) & !is.null(glm_Q_M)) {
     warning(paste0(
       "Super Learner library and GLM formula specified.",
       " Proceeding with Super Learner only."
@@ -454,7 +454,7 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
     glm_Q_M <- NULL
   }
   # subset data into training and validation sets
-  if (length(valid_rows) != length(Y)) {
+  if (length(valid_rows) != length(M1)) {
     trainA <- A[-valid_rows]
     trainC <- C[-valid_rows, , drop = FALSE]
     trainM1 <- M1[-valid_rows]
@@ -488,6 +488,12 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
                       n_bins = length(unique(M1)), breaks = NULL)
   # remove weights column
   long_train_data_M1[[1]] <- long_train_data_M1[[1]][,-ncol(long_train_data_M1[[1]])]
+  
+  #~~~~~
+  # remove max value of M1 rows
+  max_bin_id <- max(long_train_data_M1$data$bin_id)
+  long_train_data_M1$data <- long_train_data_M1$data[-which(long_train_data_M1$data$bin_id == max_bin_id), ]
+  #~~~~~
 
   # make a long formatted data set for the conditional hazard estimation
   # of M2 given A, C
@@ -497,6 +503,12 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
                       n_bins = length(unique(M2)), breaks = NULL)
   # remove weights column
   long_train_data_M2[[1]] <- long_train_data_M2[[1]][,-ncol(long_train_data_M2[[1]])]
+
+  #~~~~~
+  # remove max value of M1 rows
+  max_bin_id <- max(long_train_data_M2$data$bin_id)
+  long_train_data_M2$data <- long_train_data_M2$data[-which(long_train_data_M2$data$bin_id == max_bin_id), ]
+  #~~~~~
 
   # Super Learner
   if (!is.null(SL_Q_M)) {
@@ -517,13 +529,14 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
           verbose = verbose, family = binomial(), SL.library = SL_Q_M,
           method = drtmle:::tmp_method.CC_nloglik()
         )
-      } else if (length(SL_Q) == 1) {
+        hp <- "SuperLearner"
+      } else if (length(SL_Q_M) == 1) {
         fm_M1_given_M2 <- do.call(SL_Q_M, args = list(
           Y = long_train_data_M1$data$in_bin,
           X = long_train_data_M1$data[ , 3:ncol(long_train_data_M1$data)],
           verbose = verbose, newX = long_train_data_M1$data[ , 3:ncol(long_train_data_M1$data)],
           obsWeights = rep(1, length(long_train_data_M1$data[ , 1])),
-          family = family
+          family = binomial()
         ))
 
         fm_M2 <- do.call(SL_Q_M, args = list(
@@ -531,14 +544,16 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
           X = long_train_data_M2$data[ , 3:ncol(long_train_data_M2$data)],
           verbose = verbose, newX = long_train_data_M2$data[ , 3:ncol(long_train_data_M2$data)],
           obsWeights = rep(1, length(long_train_data_M2$data[ , 1])),
-          family = family
+          family = binomial()
         ))
+        hp <- "single_algo"
       }
       # get predicted value back... 
       list_by_a_0 <- sapply(a_0, FUN = predict_density, 
                             sl_fit_conditional = fm_M1_given_M2, 
                             sl_fit_marginal = fm_M2,
                             all_mediator_values = all_mediator_values, 
+                            how_predict = hp,
                             validC = validC, 
                             M1 = M1, M2 = M2, valid_n = valid_n,
                             stratify = FALSE,
@@ -572,6 +587,7 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
           
           return(list(fm_M1_given_M2, fm_M2))
         }, simplify = FALSE)
+        hp <- "SuperLearner"
       } else if (length(SL_Q) == 1) {
         fm <- sapply(a_0, function(x) {
           include2 <- long_train_data_M1$data$A == x
@@ -596,7 +612,8 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
             family = binomial()
           ))
           return(list(fm_M1_given_M2, fm_M2))
-        }, simplify = FALSE)          
+        }, simplify = FALSE)   
+        hp <- "single_algo"       
       } # end else if length(SL_Q) == 1
 
       list_by_a_0 <- mapply(a_val = a_0, fm = fm, FUN = function(a_val, fm){
@@ -604,6 +621,7 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
                         sl_fit_marginal = fm[[2]],
                         all_mediator_values = all_mediator_values, 
                         validC = validC, 
+                        how_predict = hp,
                         M1 = M1, M2 = M2, valid_n = valid_n,
                         stratify = TRUE)
       }, SIMPLIFY = FALSE)
@@ -618,11 +636,11 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
     if (!stratify) {
       fm_M1_given_M2 <- stats::glm(
         stats::as.formula(paste0("in_bin ~ ", glm_Q_M$M1)),
-        data = long_train_data_M1$data[ , 2:ncol(long_train_data_M1$data)], family = family
+        data = long_train_data_M1$data[ , 2:ncol(long_train_data_M1$data)], family = binomial()
       )
       fm_M2 <- stats::glm(
         stats::as.formula(paste0("in_bin ~ ", glm_Q_M$M2)),
-        data = long_train_data_M2$data[ , 2:ncol(long_train_data_M2$data)], family = family
+        data = long_train_data_M2$data[ , 2:ncol(long_train_data_M2$data)], family = binomial()
       )
       
       # get predicted value back... 
@@ -631,6 +649,7 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
                             sl_fit_marginal = fm_M2,
                             all_mediator_values = all_mediator_values, 
                             validC = validC, 
+                            how_predict = "glm",
                             M1 = M1, M2 = M2, valid_n = valid_n,
                             stratify = FALSE,
                             simplify = FALSE)
@@ -657,10 +676,12 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
         return(list(fm_M1_given_M2, fm_M2))
       }, simplify = FALSE)
       list_by_a_0 <- mapply(a_val = a_0, fm = fm, FUN = function(a_val, fm){
-      predict_density(sl_fit_conditional = fm[[1]], 
+      predict_density(a_val = a_val,
+                      sl_fit_conditional = fm[[1]], 
                       sl_fit_marginal = fm[[2]],
                       all_mediator_values = all_mediator_values, 
                       validC = validC, 
+                      how_predict = "glm",
                       M1 = M1, M2 = M2, valid_n = valid_n,
                       stratify = TRUE)
       }, SIMPLIFY = FALSE)
@@ -686,71 +707,91 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
 #' distributions. Used to get each of the relevant nuisance parameters needed
 #' to evaluate the total, direct, and indirect effects. 
 
-get_Qbarbar <- function(Qbar_n, Q_M_n, all_mediator_values, ...){
+get_Qbarbar <- function(Qbar_n, Q_M_n, unique_M1_values, unique_M2_values, all_mediator_values, ...){
  
   # get Qbarbar_M1_times_M2_star_a (indirect)
   M1_times_M2_star_a <- mapply(FUN = get_M1_times_M2_star_a,
                                Qbar_n_i = Qbar_n,
                                Q_M_n_i = Q_M_n,
-                               MoreArgs = list(all_mediator_values = all_mediator_values),
+                               MoreArgs = list(all_mediator_values = all_mediator_values,
+                                               unique_M1_values = unique_M1_values, 
+                                               unique_M2_values = unique_M2_values),
                                SIMPLIFY = TRUE)
   # get Qbarbar_M1_star_times_M2_star_a (indirect)
-  M1_star_times_M2_star_a <- mapply(FUN = get_M1_times_M2_star_a,
+  M1_star_times_M2_star_a <- mapply(FUN = get_M1_star_times_M2_star_a,
                              Qbar_n_i = Qbar_n,
                              Q_M_n_i = Q_M_n,
-                             MoreArgs = list(all_mediator_values = all_mediator_values),
+                             MoreArgs = list(all_mediator_values = all_mediator_values,
+                                             unique_M1_values = unique_M1_values, 
+                                             unique_M2_values = unique_M2_values),
                              SIMPLIFY = TRUE)
   # get Qbarbar_M1_star_times_M2_a (indirect)
   M1_star_times_M2_a <- mapply(FUN = get_M1_star_times_M2_a,
                              Qbar_n_i = Qbar_n,
                              Q_M_n_i = Q_M_n,
-                             MoreArgs = list(all_mediator_values = all_mediator_values),
+                             MoreArgs = list(all_mediator_values = all_mediator_values,
+                                             unique_M1_values = unique_M1_values, 
+                                             unique_M2_values = unique_M2_values),
                              SIMPLIFY = TRUE)
   # get Qbarbar_M1_star_M2_star_a_star (total + direct, iterative?)
   M1_star_M2_star_a_star <- mapply(FUN = get_M1_star_M2_star_a_star,
                              Qbar_n_i = Qbar_n,
                              Q_M_n_i = Q_M_n,
-                             MoreArgs = list(all_mediator_values = all_mediator_values),
+                             MoreArgs = list(all_mediator_values = all_mediator_values,
+                                             unique_M1_values = unique_M1_values, 
+                                             unique_M2_values = unique_M2_values),
                              SIMPLIFY = TRUE)
   
   # get Qbarbar_M1_star_M2_star_a (indirect)
   M1_star_M2_star_a <- mapply(FUN = get_M1_star_M2_star_a,
                              Qbar_n_i = Qbar_n,
                              Q_M_n_i = Q_M_n,
-                             MoreArgs = list(all_mediator_values = all_mediator_values),
+                             MoreArgs = list(all_mediator_values = all_mediator_values,
+                                             unique_M1_values = unique_M1_values, 
+                                             unique_M2_values = unique_M2_values),
                              SIMPLIFY = TRUE)
 
   # get Qbarbar_M1_M2_a (total)
   M1_M2_a <- mapply(FUN = get_M1_M2_a,
                      Qbar_n_i = Qbar_n,
                      Q_M_n_i = Q_M_n,
-                     MoreArgs = list(all_mediator_values = all_mediator_values),
+                     MoreArgs = list(all_mediator_values = all_mediator_values,
+                                     unique_M1_values = unique_M1_values, 
+                                     unique_M2_values = unique_M2_values),
                      SIMPLIFY = TRUE)
 
   # get Qbarbar_M1_star_a
   M1_star_a <- mapply(FUN = get_M1_star_a,
                    Qbar_n_i = Qbar_n,
                    Q_M_n_i = Q_M_n,
-                   MoreArgs = list(all_mediator_values = all_mediator_values),
+                   MoreArgs = list(all_mediator_values = all_mediator_values,
+                                   unique_M1_values = unique_M1_values, 
+                                   unique_M2_values = unique_M2_values),
                    SIMPLIFY = TRUE)
   # get Qbarbar_M1_a
   M1_a <- mapply(FUN = get_M1_a,
                    Qbar_n_i = Qbar_n,
                    Q_M_n_i = Q_M_n,
-                   MoreArgs = list(all_mediator_values = all_mediator_values),
+                   MoreArgs = list(all_mediator_values = all_mediator_values,
+                                   unique_M1_values = unique_M1_values, 
+                                   unique_M2_values = unique_M2_values),
                    SIMPLIFY = TRUE)
 
   # get Qbarbar_M2_star_a
   M2_star_a <- mapply(FUN = get_M2_star_a,
                    Qbar_n_i = Qbar_n,
                    Q_M_n_i = Q_M_n,
-                   MoreArgs = list(all_mediator_values = all_mediator_values),
+                   MoreArgs = list(all_mediator_values = all_mediator_values,
+                                   unique_M1_values = unique_M1_values, 
+                                   unique_M2_values = unique_M2_values),
                    SIMPLIFY = TRUE)
   # get Qbarbar_M2_a
   M2_a <- mapply(FUN = get_M2_a,
                    Qbar_n_i = Qbar_n,
                    Q_M_n_i = Q_M_n,
-                   MoreArgs = list(all_mediator_values = all_mediator_values),
+                   MoreArgs = list(all_mediator_values = all_mediator_values,
+                                   unique_M1_values = unique_M1_values, 
+                                   unique_M2_values = unique_M2_values),
                    SIMPLIFY = TRUE)
 
   return(list(M1_times_M2_star_a = M1_times_M2_star_a,
@@ -763,10 +804,10 @@ get_Qbarbar <- function(Qbar_n, Q_M_n, all_mediator_values, ...){
               M2_a = M2_a, M2_star_a = M2_star_a))
 }
 
-get_M2_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
+get_M2_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values, unique_M1_values, unique_M2_values){
   Qbarn_a_frame <- data.frame(all_mediator_values, Qbar_n_a_i = Qbar_n_i$Qbar_a_0[[2]])
   Qbarn_a_frame <- Qbarn_a_frame[Qbar_n_i$which_M1_obs, ]
-  Q_M2_a_star_frame <- data.frame(M2 = unique(M2), 
+  Q_M2_a_star_frame <- data.frame(M2 = unique_M2_values, 
                               Q_M2_a_star = Q_M_n_i[[1]][[3]])
   nuisance_frame <- reduce_merge(Qbarn_a_frame, Q_M2_a_star_frame)
   out <- sum(with(nuisance_frame,
@@ -774,21 +815,21 @@ get_M2_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
   return(out)
 }
 
-get_M2_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
+get_M2_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values, unique_M1_values, unique_M2_values){
   Qbarn_a_frame <- data.frame(all_mediator_values, Qbar_n_a_i = Qbar_n_i$Qbar_a_0[[2]])
   Qbarn_a_frame <- Qbarn_a_frame[Qbar_n_i$which_M1_obs, ]
-  Q_M2_a_frame <- data.frame(M2 = unique(M2), 
-                              Q_M2_a = Q_M_n_i[[2]][[2]])
+  Q_M2_a_frame <- data.frame(M2 = unique_M2_values, 
+                              Q_M2_a = Q_M_n_i[[2]][[3]])
   nuisance_frame <- reduce_merge(Qbarn_a_frame, Q_M2_a_frame)
   out <- sum(with(nuisance_frame,
                   Qbar_n_a_i * Q_M2_a))
   return(out)
 }
 
-get_M1_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
+get_M1_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values, unique_M1_values, unique_M2_values){
   Qbarn_a_frame <- data.frame(all_mediator_values, Qbar_n_a_i = Qbar_n_i$Qbar_a_0[[2]])
   Qbarn_a_frame <- Qbarn_a_frame[Qbar_n_i$which_M2_obs, ]
-  Q_M1_a_star_frame <- data.frame(M1 = unique(M1), 
+  Q_M1_a_star_frame <- data.frame(M1 = unique_M1_values, 
                               Q_M1_a_star = Q_M_n_i[[1]][[2]])
   nuisance_frame <- reduce_merge(Qbarn_a_frame, Q_M1_a_star_frame)
   out <- sum(with(nuisance_frame,
@@ -796,10 +837,10 @@ get_M1_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
   return(out)
 }
 
-get_M1_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
+get_M1_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values, unique_M1_values, unique_M2_values){
   Qbarn_a_frame <- data.frame(all_mediator_values, Qbar_n_a_i = Qbar_n_i$Qbar_a_0[[2]])
   Qbarn_a_frame <- Qbarn_a_frame[Qbar_n_i$which_M2_obs, ]
-  Q_M1_a_frame <- data.frame(M1 = unique(M1), 
+  Q_M1_a_frame <- data.frame(M1 = unique_M1_values, 
                               Q_M1_a = Q_M_n_i[[2]][[2]])
   nuisance_frame <- reduce_merge(Qbarn_a_frame, Q_M1_a_frame)
   out <- sum(with(nuisance_frame,
@@ -807,12 +848,12 @@ get_M1_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
   return(out)
 }
 
-get_M1_star_times_M2_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
+get_M1_star_times_M2_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values, unique_M1_values, unique_M2_values){
   Qbarn_a_frame <- data.frame(all_mediator_values, Qbar_n_a_i = Qbar_n_i$Qbar_a_0[[2]],
                               id = seq_along(Qbar_n_i$Qbar_a_0[[2]]))
-  Q_M1_a_star_frame <- data.frame(M1 = unique(M1), 
+  Q_M1_a_star_frame <- data.frame(M1 = unique_M1_values, 
                               Q_M1_a_star = Q_M_n_i[[1]][[2]])        
-  Q_M2_a_star_frame <- data.frame(M2 = unique(M2), 
+  Q_M2_a_star_frame <- data.frame(M2 = unique_M2_values, 
                               Q_M2_a_star = Q_M_n_i[[1]][[3]])
 
 
@@ -823,12 +864,12 @@ get_M1_star_times_M2_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
   return(out)
 }
 
-get_M1_times_M2_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
+get_M1_times_M2_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values, unique_M1_values, unique_M2_values){
   Qbarn_a_frame <- data.frame(all_mediator_values, Qbar_n_a_i = Qbar_n_i$Qbar_a_0[[2]],
                               id = seq_along(Qbar_n_i$Qbar_a_0[[2]]))
-  Q_M1_a_frame <- data.frame(M1 = unique(M1), 
+  Q_M1_a_frame <- data.frame(M1 = unique_M1_values, 
                             Q_M1_a = Q_M_n_i[[2]][[2]])        
-  Q_M2_a_star_frame <- data.frame(M2 = unique(M2), 
+  Q_M2_a_star_frame <- data.frame(M2 = unique_M2_values, 
                               Q_M2_a_star = Q_M_n_i[[1]][[3]])
 
   nuisance_frame <- Reduce("reduce_merge", list(Qbarn_a_frame, Q_M2_a_star_frame, Q_M1_a_frame))
@@ -838,12 +879,12 @@ get_M1_times_M2_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
   return(out)
 }
 
-get_M1_star_times_M2_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
+get_M1_star_times_M2_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values, unique_M1_values, unique_M2_values){
   Qbarn_a_frame <- data.frame(all_mediator_values, Qbar_n_a_i = Qbar_n_i$Qbar_a_0[[2]],
                               id = seq_along(Qbar_n_i$Qbar_a_0[[2]]))
-  Q_M1_a_star_frame <- data.frame(M1 = unique(M1), 
+  Q_M1_a_star_frame <- data.frame(M1 = unique_M1_values, 
                             Q_M1_a_star = Q_M_n_i[[1]][[2]])        
-  Q_M2_a_frame <- data.frame(M2 = unique(M2), 
+  Q_M2_a_frame <- data.frame(M2 = unique_M2_values, 
                             Q_M2_a = Q_M_n_i[[2]][[3]])
 
   nuisance_frame <- Reduce("reduce_merge", list(Qbarn_a_frame, Q_M2_a_frame, Q_M1_a_star_frame))
@@ -854,17 +895,17 @@ get_M1_star_times_M2_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
 }
 
 
-get_M1_star_M2_star_a_star <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
+get_M1_star_M2_star_a_star <- function(Qbar_n_i, Q_M_n_i, all_mediator_values, ...){
   out <- sum(Qbar_n_i$Qbar_a_0[[1]] * Q_M_n_i[[1]][[1]])
   return(out)
 }
 
-get_M1_star_M2_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
+get_M1_star_M2_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values, ...){
   out <- sum(Qbar_n_i$Qbar_a_0[[2]] * Q_M_n_i[[1]][[1]])
   return(out)
 }
 
-get_M1_M2_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values){
+get_M1_M2_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values, ...){
   out <- sum(Qbar_n_i$Qbar_a_0[[2]] * Q_M_n_i[[2]][[1]])
   return(out)
 }

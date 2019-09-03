@@ -149,24 +149,28 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 	return(Qbar_n_tmle)
 }
 
-target_Qbarbar <- function(Qbar, Qbarbar, Y, A, a, a_star, 
+target_Qbarbar <- function(Qbar, Qbarbar, Y, A, a, a_star, gn, M1, M2,
+                           all_mediator_values, max_iter, 
                            tol = 1/(sqrt(length(Y)) * log(length(Y)))){
 	
 	M1_times_M2_star_a <- target_Qbarbar_M1_times_M2_star_a(
-		Qbarbar = Qbarbar, Y = Y, A = A, a = a, a_star = a_star, tol = tol
+		Qbarbar = Qbarbar, Y = Y, A = A, a = a, a_star = a_star, tol = tol, gn = gn,
+		max_iter = max_iter
     )
     M1_star_times_M2_a <- target_Qbarbar_M1_star_times_M2_a(
-		Qbarbar = Qbarbar, Y = Y, A = A, a = a, a_star = a_star, tol = tol
+		Qbarbar = Qbarbar, Y = Y, A = A, a = a, a_star = a_star, tol = tol, gn = gn,
+		max_iter = max_iter
     )
     M1_star_times_M2_star_a <- target_Qbarbar_M1_star_times_M2_star_a(
-		Qbarbar = Qbarbar, Y = Y, A = A, a = a, a_star = a_star, tol = tol
+		Qbarbar = Qbarbar, Y = Y, A = A, a = a, a_star = a_star, tol = tol, gn = gn
     )
 
 	conditional_direct_effect <- target_conditional_direct_effect(
-        Qbarbar = Qbarbar, Qbar = Qbar, Y = Y, A = A, a = a, a_star = a_star
+        Qbarbar = Qbarbar, Qbar = Qbar, Y = Y, A = A, a = a, a_star = a_star, gn = gn, M1 = M1, M2 = M2,
+        all_mediator_values = all_mediator_values
     )
     total_effect <- target_conditional_total_effect(
-        Qbarbar = Qbarbar, Qbar = Qbar, Y = Y, A = A, a = a, a_star = a_star
+        Qbarbar = Qbarbar, Qbar = Qbar, Y = Y, A = A, a = a, a_star = a_star, gn = gn
     )
 
     Qbarbar$M1_times_M2_star_a <- M1_times_M2_star_a
@@ -203,11 +207,12 @@ target_Qbarbar <- function(Qbar, Qbarbar, Y, A, a, a_star,
 #' @param a The comparison value of treatment
 #' @param a_star The referent value of treatment
 #' @param tol Tolerance for iterative TMLE 
-#' 
+#' @param iterative Should iterative implementation be used?
 #' @importFrom SuperLearner trimLogit
 #' 
-target_Qbarbar_M1_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star, 
+target_Qbarbar_M1_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star, gn, 
                                         tol = 1/(sqrt(length(Y)) * log(length(Y))), 
+                                        max_iter = 25, iterative = TRUE, 
                                         ...){
 	# outcome of regression = { Qbarbar_M2_star_a if A = a
 	# 						  { Qbarbar_M1_star_a if A = a_star
@@ -222,59 +227,74 @@ target_Qbarbar_M1_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star,
 	
 	H_A <- rep(0, n)
 	H_A[A == a] <- 1 / gn[[2]][A == a]
-	H_A[A == a_star] <- 1 / gn[[1]][A == a_star]
+	H_A[A == a_star] <- -1 / gn[[1]][A == a_star]
 
-	Qbarbar_M1_times_M2_star_a_tmle <- Qbarbar$M1_times_M2_star_a
-	Pn_D <- Inf
-	while(abs(Pn_D) > tol){
-		# target via submodel through Qbarbar, 
-		scaled_offset <- rep(0, n)
-		scaled_offset <- (Qbarbar_M1_times_M2_star_a_tmle - min_Y)/(max_Y - min_Y)
+	if(iterative){
+		Qbarbar_M1_times_M2_star_a_tmle <- Qbarbar$M1_times_M2_star_a
+		Pn_D <- Inf
+		iter <- 0
+		while(abs(Pn_D) > tol & iter <= max_iter){
+			iter <- iter + 1
+			# target via submodel through Qbarbar, 
+			scaled_offset <- rep(0, n)
+			scaled_offset <- (Qbarbar_M1_times_M2_star_a_tmle - min_Y)/(max_Y - min_Y)
 
-		fluc_data <- data.frame(
-		  scaled_outcome = scaled_outcome,
-		  H_A = H_A,
-		  scaled_offset = SuperLearner::trimLogit(scaled_offset)
-	    )[A == a, ]
+			fluc_data <- data.frame(
+			  scaled_outcome = scaled_outcome,
+			  H_A = H_A,
+			  scaled_offset = SuperLearner::trimLogit(scaled_offset)
+		    )[A == a, ]
 
-	    fluc_mod <- suppressWarnings(glm(scaled_outcome ~ H_A -1 + offset(scaled_offset),
-	                    family = stats::binomial(), data = fluc_data, start = 0))
+		    fluc_mod <- suppressWarnings(glm(scaled_outcome ~ H_A -1 + offset(scaled_offset),
+		                    family = stats::binomial(), data = fluc_data, start = 0))
 
-		pred_data_a <- data.frame(
-		  scaled_outcome = scaled_outcome,
-		  H_A = 1 / gn[[2]],
-		  scaled_offset = SuperLearner::trimLogit(scaled_offset)	 
-        )
-	    Qbarbar_M1_times_M2_star_a_tmle <- predict(fluc_mod, 
-	                                         newdata = pred_data_a,
-	                                         type = "response")*(max_Y - min_Y) + min_Y
+			pred_data_a <- data.frame(
+			  scaled_outcome = scaled_outcome,
+			  H_A = 1 / gn[[2]],
+			  scaled_offset = SuperLearner::trimLogit(scaled_offset)	 
+	        )
+		    Qbarbar_M1_times_M2_star_a_tmle <- predict(fluc_mod, 
+		                                         newdata = pred_data_a,
+		                                         type = "response")*(max_Y - min_Y) + min_Y
 
-	    # now for a_star folks
-	    scaled_offset <- rep(0, n)
-		scaled_offset <- (Qbarbar_M1_times_M2_star_a_tmle - min_Y)/(max_Y - min_Y)
+		    # now for a_star folks
+		    scaled_offset <- rep(0, n)
+			scaled_offset <- (Qbarbar_M1_times_M2_star_a_tmle - min_Y)/(max_Y - min_Y)
 
-		fluc_data <- data.frame(
-		  scaled_outcome = scaled_outcome,
-		  H_A = H_A,
-		  scaled_offset = SuperLearner::trimLogit(scaled_offset)	                  	 
-	    )[A == a_star, ]
+			fluc_data <- data.frame(
+			  scaled_outcome = scaled_outcome,
+			  H_A = H_A,
+			  scaled_offset = SuperLearner::trimLogit(scaled_offset)	                  	 
+		    )[A == a_star, ]
 
-	    fluc_mod <- suppressWarnings(glm(scaled_outcome ~ H_A -1 + offset(scaled_offset),
-	                    family = binomial(), data = fluc_data, start = 0))
+		    fluc_mod <- suppressWarnings(glm(scaled_outcome ~ H_A -1 + offset(scaled_offset),
+		                    family = binomial(), data = fluc_data, start = 0))
 
-		pred_data_a_star <- data.frame(
-		  scaled_outcome = scaled_outcome,
-		  H_A = 1 / gn[[1]],
-		  scaled_offset = SuperLearner::trimLogit(scaled_offset)	 
-        )
-	    Qbarbar_M1_times_M2_star_a_tmle <- predict(fluc_mod, 
-	                                         newdata = pred_data_a_star,
-	                                         type = "response")*(max_Y - min_Y) + min_Y
+			pred_data_a_star <- data.frame(
+			  scaled_outcome = scaled_outcome,
+			  H_A = 1 / gn[[1]],
+			  scaled_offset = SuperLearner::trimLogit(scaled_offset)	 
+	        )
+		    Qbarbar_M1_times_M2_star_a_tmle <- predict(fluc_mod, 
+		                                         newdata = pred_data_a_star,
+		                                         type = "response")*(max_Y - min_Y) + min_Y
 
-	    D_i <- (2*as.numeric(A == a) - as.numeric(A %in% c(a,a_star))) / ifelse(A == a, gn[[2]], gn[[1]]) * 
-	    			(ifelse(A == a, Qbarbar$M2_star_a, Qbarbar$M1_a) - Qbarbar_M1_times_M2_star_a_tmle)
-		Pn_D <- mean(D_i)
-		cat(mean(Pn_D), "\n")
+		    D_i <- (2*as.numeric(A == a) - as.numeric(A %in% c(a,a_star))) / ifelse(A == a, gn[[2]], gn[[1]]) * 
+		    			(ifelse(A == a, Qbarbar$M2_star_a, Qbarbar$M1_a) - Qbarbar_M1_times_M2_star_a_tmle)
+			Pn_D <- mean(D_i)
+			cat(mean(Pn_D), "\n")
+		}
+	}else{
+		# if not iterative, then we need to code our own intercept only logistic regression
+		# with weights, since GLM will complain about negative weights
+		nloglikloss <- function(epsilon, scaled_outcome, H_A, scaled_offset){
+			p_hat <- stats::plogis(stats::qlogis(scaled_offset) + epsilon)
+			wts <- H_A
+			loss <- - wts * log(scaled_outcome^p_hat * (1 - scaled_outcome)^(1 - p_hat))
+			risk <- mean(loss)
+			return(risk)
+		}
+		fluc_mod <- optim(par = 0, fn = nloglikloss, lower = -10, upper = 10)
 	}
 	return(Qbarbar_M1_times_M2_star_a_tmle)
 }
@@ -304,8 +324,9 @@ target_Qbarbar_M1_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star,
 #' 
 #' @importFrom SuperLearner trimLogit
 #' 
-target_Qbarbar_M1_star_times_M2_a <- function(Qbarbar, Y, A, a, a_star, 
-                                        tol = 1/(sqrt(length(Y)) * log(length(Y))), 
+target_Qbarbar_M1_star_times_M2_a <- function(Qbarbar, Y, A, a, a_star, gn, 
+                                        tol = 1/(sqrt(length(Y)) * log(length(Y))),
+                                        max_iter = 25,  
                                         ...){
 	# outcome of regression = { Qbarbar_M2_a if A = a_star
 	# 						  { Qbarbar_M1_star_a if A = a
@@ -324,7 +345,9 @@ target_Qbarbar_M1_star_times_M2_a <- function(Qbarbar, Y, A, a, a_star,
 
 	Qbarbar_M1_star_times_M2_a_tmle <- Qbarbar$M1_star_times_M2_a
 	Pn_D <- Inf
-	while(abs(Pn_D) > tol){
+	iter <- 0
+	while(abs(Pn_D) > tol & iter <= max_iter){
+		iter <- iter + 1
 		# target via submodel through Qbarbar, 
 		scaled_offset <- rep(0, n)
 		scaled_offset <- (Qbarbar_M1_star_times_M2_a_tmle - min_Y)/(max_Y - min_Y)
@@ -348,7 +371,6 @@ target_Qbarbar_M1_star_times_M2_a <- function(Qbarbar, Y, A, a, a_star,
 	                                         type = "response")*(max_Y - min_Y) + min_Y
 
 	    # now for a_star folks
-	    scaled_offset <- rep(0, n)
 		scaled_offset <- (Qbarbar_M1_star_times_M2_a_tmle - min_Y)/(max_Y - min_Y)
 
 		fluc_data <- data.frame(
@@ -398,7 +420,7 @@ target_Qbarbar_M1_star_times_M2_a <- function(Qbarbar, Y, A, a, a_star,
 #' 
 #' @importFrom SuperLearner trimLogit
 #' 
-target_Qbarbar_M1_star_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star, 
+target_Qbarbar_M1_star_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star, gn,
                                         tol = 1/(sqrt(length(Y)) * log(length(Y))), 
                                         ...){
 	# outcome of regression = { Qbarbar_M2_star_a if A = a
@@ -458,9 +480,9 @@ target_Qbarbar_M1_star_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star,
 #' @param a_star The referent value of treatment
 #' @param tol Tolerance for iterative TMLE 
 
-target_conditional_direct_effect <- function(Qbarbar, 
+target_conditional_direct_effect <- function(Qbarbar, all_mediator_values, gn,
                                              Qbar, # should come in as TMLE
-                                             Y, A, a, a_star, ...){
+                                             Y, A, a, a_star, M1, M2, ...){
 	n <- length(Qbarbar[[1]])
 	min_Y <- min(Y); max_Y <- max(Y)
 	Qbar_M1M2_a <- unlist(mapply(Qbar_n_i = Qbar, M1_i = M1, M2_i = M2,
@@ -522,7 +544,7 @@ target_conditional_direct_effect <- function(Qbarbar,
 #' @param a The comparison value of treatment
 #' @param a_star The referent value of treatment
 
-target_conditional_total_effect <- function(Qbarbar, 
+target_conditional_total_effect <- function(Qbarbar, gn, 
                                             Qbar, # should come in as TMLE
                                             Y, A, a, a_star, ...){
 	n <- length(Qbarbar[[1]])

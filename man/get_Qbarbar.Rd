@@ -6,7 +6,8 @@
 distributions. Used to get each of the relevant nuisance parameters needed
 to evaluate the total, direct, and indirect effects.}
 \usage{
-get_Qbarbar(Qbar_n, Q_M_n, all_mediator_values, ...)
+get_Qbarbar(Qbar_n, Q_M_n, unique_M1_values, unique_M2_values,
+  all_mediator_values, ...)
 }
 \description{
 Helper function to marginalize outcome regression over mediator 

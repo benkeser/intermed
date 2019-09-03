@@ -7,7 +7,7 @@ the direct effect at a given set of estimated nuisance parameters
 and for each observation.}
 \usage{
 evaluate_eif_direct(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_star,
-  use_conditional, ...)
+  use_conditional, all_mediator_values, ...)
 }
 \arguments{
 \item{Y}{The outcome}

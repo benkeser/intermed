@@ -5,13 +5,16 @@
 \title{Helper function to predict from a super learner fit on the hazard scale
 to obtain a prediction on the density scale}
 \usage{
-predict_density(sl_fit_conditional, sl_fit_marginal, all_mediator_values,
-  a_val, validC, M1, M2, valid_n, stratify)
+predict_density(sl_fit_conditional, sl_fit_marginal, how_predict,
+  all_mediator_values, a_val, validC, M1, M2, valid_n, stratify)
 }
 \arguments{
 \item{sl_fit_conditional}{A fitted SuperLearner object for the M1 | M2, C, A regression}
 
 \item{sl_fit_marginal}{A fitted SuperLearner object for the M2 | C, A regression}
+
+\item{how_predict}{Needed to figure out how to predict from model. Possible choices
+are "SuperLearner", "single_algo", and "glm"}
 
 \item{all_mediator_values}{data.frame of all observed mediator values}
 

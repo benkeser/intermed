@@ -47,7 +47,8 @@ evaluate_total_effect <- function(Qbarbar){
 #' @param use_conditional Boolean. Should the conditional_total_effect be used (generally used for when evaluating
 #' EIF of targeted nuisance parameters, since there we target directly the difference)
 
-evaluate_eif_direct <- function(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_star, use_conditional, ...){
+evaluate_eif_direct <- function(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_star, use_conditional, all_mediator_values, 
+                                ...){
 	n <- length(Qbarbar[[1]])
 
 	Qbar_M1M2_a <- unlist(mapply(Qbar_n_i = Qbar, M1_i = M1, M2_i = M2,
@@ -115,7 +116,7 @@ evaluate_direct_effect <- function(Qbarbar, use_conditional = TRUE){
 #' @param a_star Referent treatment value
 #' 
 
-evaluate_eif_indirect_M1 <- function(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_star, ...){
+evaluate_eif_indirect_M1 <- function(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_star, all_mediator_values, ...){
 	n <- length(Qbarbar[[1]])
 	unique_M1_values <- unique(M1)
 	unique_M2_values <- unique(M2)
@@ -180,8 +181,10 @@ evaluate_indirect_effect_M1 <- function(Qbarbar){
 #' @param a_star Referent treatment value
 #' 
 
-evaluate_eif_indirect_M2 <- function(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_star, ...){
+evaluate_eif_indirect_M2 <- function(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_star, all_mediator_values, ...){
 	n <- length(Qbarbar[[1]])
+	unique_M2_values <- unique(M2)
+	unique_M1_values <- unique(M1)
 	Qbar_M1M2_a <- unlist(mapply(Qbar_n_i = Qbar, M1_i = M1, M2_i = M2,
                              FUN = extract_Qbar_obs,
                              MoreArgs = list( 

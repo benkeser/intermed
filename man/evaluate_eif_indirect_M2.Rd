@@ -7,7 +7,7 @@ the indirect effect through M2 at a given set of estimated nuisance parameters
 and for each observation.}
 \usage{
 evaluate_eif_indirect_M2(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_star,
-  ...)
+  all_mediator_values, ...)
 }
 \arguments{
 \item{Y}{The outcome}

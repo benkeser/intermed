@@ -4,9 +4,9 @@
 \alias{estimate_Qbar}
 \title{estimate_Qbar}
 \usage{
-estimate_Qbar(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Q, glm_Q = NULL, a_0,
-  stratify, family, verbose = FALSE, return_models = FALSE, valid_rows,
-  ...)
+estimate_Qbar(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Qbar, glm_Qbar = NULL,
+  a_0, stratify, family, verbose = FALSE, return_models = FALSE,
+  valid_rows, all_mediator_values, ...)
 }
 \arguments{
 \item{Y}{A vector of continuous or binary outcomes.}
@@ -26,10 +26,10 @@ missing 1 if observed).}
 \item{DeltaM}{Indicator of missing outcome (assumed to be equal to 0 if
 missing 1 if observed).}
 
-\item{SL_Q}{A vector of characters or a list describing the Super Learner
+\item{SL_Qbar}{A vector of characters or a list describing the Super Learner
 library to be used for the outcome regression.}
 
-\item{glm_Q}{A character describing a formula to be used in the call to
+\item{glm_Qbar}{A character describing a formula to be used in the call to
 \code{glm} for the outcome regression.}
 
 \item{a_0}{A list of fixed treatment values}
@@ -48,9 +48,9 @@ outcome regression, propensity score, and reduced-dimension regressions.}
 \item{valid_rows}{A \code{list} of length \code{cvFolds} containing the row
 indexes of observations to include in validation fold.}
 
-\item{...}{Additional arguments (not currently used)}
-
 \item{all_mediator_values}{All combinations of M1 and M2}
+
+\item{...}{Additional arguments (not currently used)}
 }
 \description{
 Function to estimate outcome regression as a function of \code{A, C, M1,} 

@@ -4,8 +4,9 @@
 \alias{target_Qbarbar_M1_times_M2_star_a}
 \title{Function for targeting Qbarbar_M1_times_M2_star_a}
 \usage{
-target_Qbarbar_M1_times_M2_star_a(Qbarbar, Y, A, a, a_star,
-  tol = 1/(sqrt(length(Y)) * log(length(Y))), ...)
+target_Qbarbar_M1_times_M2_star_a(Qbarbar, Y, A, a, a_star, gn,
+  tol = 1/(sqrt(length(Y)) * log(length(Y))), max_iter = 25,
+  iterative = TRUE, ...)
 }
 \arguments{
 \item{Qbarbar}{List of marginalized parameters}
@@ -19,6 +20,8 @@ target_Qbarbar_M1_times_M2_star_a(Qbarbar, Y, A, a, a_star,
 \item{a_star}{The referent value of treatment}
 
 \item{tol}{Tolerance for iterative TMLE}
+
+\item{iterative}{Should iterative implementation be used?}
 }
 \description{
 Here we take an iterative approach. There are two interesting features of this 

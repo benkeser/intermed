@@ -160,8 +160,8 @@ map_hazard_to_density <- function(hazard_pred_single_obs) {
   }
 
   # sanity check of dimensions
-  assertthat::assert_that(all(dim(hazard_pred_single_obs) ==
-    dim(hazard_predicted)))
+  # assertthat::assert_that(all(dim(hazard_pred_single_obs) ==
+  #   dim(hazard_predicted)))
 
   # multiply hazards across rows to construct the individual-level density
   density_pred_from_hazards <- prod(hazard_predicted)
@@ -179,9 +179,12 @@ map_hazard_to_density <- function(hazard_pred_single_obs) {
 #' @param M1 All M1 values
 #' @param M2 All M2 values
 #' @param stratify Were sl_fit's stratified?
+#' @param how_predict Needed to figure out how to predict from model. Possible choices
+#' are "SuperLearner", "single_algo", and "glm"
 #' 
 predict_density <- function(sl_fit_conditional, 
                             sl_fit_marginal,
+                            how_predict, 
                             all_mediator_values, a_val, validC,
                             M1, M2, valid_n, stratify){
   n_mediator_values <- nrow(all_mediator_values)
@@ -207,12 +210,13 @@ predict_density <- function(sl_fit_conditional,
                                  n_bins = length(unique(M1)))
   # remove weights column
   newdata$data <- newdata$data[,-ncol(newdata$data)]
+
   # get predictions, cast to numeric
-  if(class(sl_fit_conditional) == "SuperLearner"){
+  if(how_predict == "SuperLearner"){
     newdata$data$haz_pred <- as.numeric(predict(sl_fit_conditional, newdata = newdata$data[ , 3:ncol(newdata$data)])$pred)
-  }else if(class(sl_fit_conditional) == "list"){
+  }else if(how_predict == "single_algo"){
     newdata$data$haz_pred <- as.numeric(predict(sl_fit_conditional$fit, newdata = newdata$data[ , 3:ncol(newdata$data)]))
-  }else if("glm" %in% class(sl_fit_conditional)){
+  }else if(how_predict == "glm"){
     newdata$data$haz_pred <- as.numeric(predict(sl_fit_conditional, newdata = newdata$data[ , 2:ncol(newdata$data)],
                                                 type = "response"))
   }
@@ -223,12 +227,26 @@ predict_density <- function(sl_fit_conditional,
   # split up by observation
   long_length <- length(conf_data[,1])
   split_densities <- split(tmp, sort(rep(seq_len(valid_n), n_mediator_values)))
-  # now normalize by dividing each conditional density by sum
+  # # now normalize by dividing each conditional density by sum
+  # normalized_densities_conditional <- lapply(split_densities, function(x){
+  #   # normalize for each unique value of M2
+  #   dens_this_id <- unlist(by(data.frame(all_mediator_values, dens = x), 
+  #                             all_mediator_values$M2, function(y){
+  #                               y$dens/ sum(y$dens)
+  #                             }), 
+  #                         use.names = FALSE)
+  #   return(dens_this_id)
+  # })  
+
+  # normalize by replacing each value for the max observed value of M1 
+  # by 1 - sum(other density values)
   normalized_densities_conditional <- lapply(split_densities, function(x){
     # normalize for each unique value of M2
     dens_this_id <- unlist(by(data.frame(all_mediator_values, dens = x), 
                               all_mediator_values$M2, function(y){
-                                y$dens/ sum(y$dens)
+                                # y$dens/ sum(y$dens)
+                                y$dens[y$M1 == max(y$M1)] <- 1 - sum(y$dens[y$M1 != max(y$M1)])
+                                return(y$dens)
                               }), 
                           use.names = FALSE)
     return(dens_this_id)
@@ -252,11 +270,11 @@ predict_density <- function(sl_fit_conditional,
   # remove weights column
   newdata$data <- newdata$data[,-ncol(newdata$data)]
   # get predictions, cast to numeric
-  if(class(sl_fit_marginal) == "SuperLearner"){
+  if(how_predict == "SuperLearner"){
     newdata$data$haz_pred <- as.numeric(predict(sl_fit_marginal, newdata = newdata$data[ , 3:ncol(newdata$data)])$pred)
-  }else if(class(sl_fit_marginal) == "list"){
+  }else if(how_predict == "single_algo"){
     newdata$data$haz_pred <- as.numeric(predict(sl_fit_marginal$fit, newdata = newdata$data[ , 3:ncol(newdata$data)]))
-  }else if("glm" %in% class(sl_fit_marginal)){
+  }else if(how_predict == "glm"){
     newdata$data$haz_pred <- as.numeric(predict(sl_fit_marginal, newdata = newdata$data[ , 2:ncol(newdata$data)],
                                                 type = "response"))
   }  
@@ -267,14 +285,27 @@ predict_density <- function(sl_fit_conditional,
   # split up by observation
   long_length <- length(conf_data[,1])
   split_densities <- split(tmp, sort(rep(seq_len(valid_n), n_mediator_values)))
+
+  # # now normalize by dividing each conditional density by sum
+  # normalized_densities_marginal <- lapply(split_densities, function(x){
+  #   # normalize 
+  #   # note that each marginal density value for M2 = m2 is copied
+  #   # length(unique(all_mediator_values$M1)) times. So we divide the sum
+  #   # by this number to get a properly normalized density
+  #   dens_this_id <- x / (sum(x) / length(unique(all_mediator_values$M1)))        
+  #   return(dens_this_id)
+  # })
+  
+  #~~~~~ 
+  max_M2 <- max(M2)
   # now normalize by dividing each conditional density by sum
   normalized_densities_marginal <- lapply(split_densities, function(x){
     # normalize 
     # note that each marginal density value for M2 = m2 is copied
     # length(unique(all_mediator_values$M1)) times. So we divide the sum
     # by this number to get a properly normalized density
-    dens_this_id <- x / (sum(x) / length(unique(all_mediator_values$M1)))        
-    return(dens_this_id)
+    x[all_mediator_values$M2 == max_M2] <- 1 - sum(x[all_mediator_values$M2 != max_M2]) / length(unique(all_mediator_values$M1))
+    return(x)
   })
 
   # joint density estimates

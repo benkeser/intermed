@@ -76,7 +76,7 @@ After using the `intermed` R package, please cite the following:
 
 ## License
 
-© 2016-2017 [David C. Benkeser](http://www.benkeserstatistics.com)
+© 2016-2019 [David C. Benkeser](http://www.benkeserstatistics.com)
 
 The contents of this repository are distributed under the MIT license.
 See below for details:

@@ -4,7 +4,7 @@
 \alias{target_Qbarbar_M1_star_times_M2_star_a}
 \title{Function for targeting Qbarbar_M1_star_times_M2_star_a}
 \usage{
-target_Qbarbar_M1_star_times_M2_star_a(Qbarbar, Y, A, a, a_star,
+target_Qbarbar_M1_star_times_M2_star_a(Qbarbar, Y, A, a, a_star, gn,
   tol = 1/(sqrt(length(Y)) * log(length(Y))), ...)
 }
 \arguments{
