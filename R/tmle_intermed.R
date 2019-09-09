@@ -337,6 +337,7 @@ intermed <- function(Y, C, M1, M2, A,
     out <- list()
     out$tmle <- list(est = tmle_est, cov = tmle_cov)
     out$aiptw <- list(est = onestep_est, cov = plugin_cov)
+    out$plugin <- plugins
     if(return_models){
       out$fm <- list(g = gnMod, Qbar = Qbar_n_models, Q_M = Q_M_n_models)
     }else{

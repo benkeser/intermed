@@ -513,12 +513,12 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
   # Super Learner
   if (!is.null(SL_Q_M)) {
     if (!stratify) {
-      if (length(SL_Q_M) > 1 | is.list(SL_Q_M)) {
+      if (length(SL_Q_M$M1) > 1 | is.list(SL_Q_M$M1)) {
         fm_M1_given_M2 <- SuperLearner::SuperLearner(
           Y = long_train_data_M1$data$in_bin,
           X = long_train_data_M1$data[ , 3:ncol(long_train_data_M1$data)],
           id = long_train_data_M1$data$obs_id,
-          verbose = verbose, family = binomial(), SL.library = SL_Q_M,
+          verbose = verbose, family = binomial(), SL.library = SL_Q_M$M1,
           method = drtmle:::tmp_method.CC_nloglik()
         )
         
@@ -526,12 +526,12 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
           Y = long_train_data_M2$data$in_bin,
           X = long_train_data_M2$data[ , 3:ncol(long_train_data_M2$data)],
           id = long_train_data_M2$data$obs_id,
-          verbose = verbose, family = binomial(), SL.library = SL_Q_M,
+          verbose = verbose, family = binomial(), SL.library = SL_Q_M$M2,
           method = drtmle:::tmp_method.CC_nloglik()
         )
         hp <- "SuperLearner"
-      } else if (length(SL_Q_M) == 1) {
-        fm_M1_given_M2 <- do.call(SL_Q_M, args = list(
+      } else if (length(SL_Q_M$M1) == 1) {
+        fm_M1_given_M2 <- do.call(SL_Q_M$M1, args = list(
           Y = long_train_data_M1$data$in_bin,
           X = long_train_data_M1$data[ , 3:ncol(long_train_data_M1$data)],
           verbose = verbose, newX = long_train_data_M1$data[ , 3:ncol(long_train_data_M1$data)],
@@ -539,7 +539,7 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
           family = binomial()
         ))
 
-        fm_M2 <- do.call(SL_Q_M, args = list(
+        fm_M2 <- do.call(SL_Q_M$M2, args = list(
           Y = long_train_data_M2$data$in_bin,
           X = long_train_data_M2$data[ , 3:ncol(long_train_data_M2$data)],
           verbose = verbose, newX = long_train_data_M2$data[ , 3:ncol(long_train_data_M2$data)],
@@ -573,7 +573,7 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
             X = long_train_data_M1$data[include2 , 3:(ncol(long_train_data_M1$data)-1)],
             id = long_train_data_M1$data$obs_id[include2],
             verbose = verbose, family = binomial(),
-            SL.library = SL_Q_M, method = drtmle:::tmp_method.CC_nloglik()
+            SL.library = SL_Q_M$M1, method = drtmle:::tmp_method.CC_nloglik()
           )
 
           fm_M2 <- SuperLearner::SuperLearner(
@@ -582,7 +582,7 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
             X = long_train_data_M2$data[include2 , 3:(ncol(long_train_data_M2$data)-1)],
             id = long_train_data_M2$data$obs_id[include2],
             verbose = verbose, family = binomial(),
-            SL.library = SL_Q_M, method = drtmle:::tmp_method.CC_nloglik()
+            SL.library = SL_Q_M$M2, method = drtmle:::tmp_method.CC_nloglik()
           )
           
           return(list(fm_M1_given_M2, fm_M2))
@@ -593,7 +593,7 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
           include2 <- long_train_data_M1$data$A == x
 
           # call function
-          fm_M1_given_M2 <- do.call(SL_Q_M, args = list(
+          fm_M1_given_M2 <- do.call(SL_Q_M$M1, args = list(
             Y = long_train_data_M1$data$in_bin[include2],
             # remove A column
             X = long_train_data_M1$data[include2 , 3:(ncol(long_train_data_M1$data)-1)],
@@ -602,7 +602,7 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
             obsWeights = rep(1, length(long_train_data_M1$data[include2 , 3])),
             family = binomial()
           ))
-          fm_M2 <- do.call(SL_Q_M, args = list(
+          fm_M2 <- do.call(SL_Q_M$M2, args = list(
             Y = long_train_data_M2$data$in_bin[include2],
             # remove A column
             X = long_train_data_M2$data[include2 , 3:(ncol(long_train_data_M2$data)-1)],
