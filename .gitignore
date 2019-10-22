@@ -1,0 +1,7 @@
+.Rproj.user
+.Rhistory
+.RData
+sandbox/*
+README.html
+vignettes/*.html
+vignettes/using_drtmle_cache/*

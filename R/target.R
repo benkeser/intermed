@@ -62,7 +62,7 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 	# this is for indirect effect through M2
 	# note that there is a shared component of H1 and H2, so one could also produce
 	# three covariates to knock out the relevant terms. for now, we stick to two
-	H2_obs <- as.numeric(A == a)/gn[[2]] * (Q_M2_a - Q_M2_a_star) * Q_M1_a_star / Q_M1M2_a
+	H2_obs <- as.numeric(A == a)/gn[[2]] * (Q_M2_a - Q_M2_a_star) * Q_M1_a / Q_M1M2_a
 	# this is for direct effect
 	H3_obs <- as.numeric(A == a)/gn[[2]] * Q_M1M2_a_star / Q_M1M2_a
 	# this is for direct effect
@@ -127,7 +127,7 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 
 	    	H_a_matrix <- with(nuisance_frame, cbind(
              	1 / gn_a * (Q_M1_a - Q_M1_a_star) * Q_M2_a_star / Q_M1M2_a,
-             	1 / gn_a * (Q_M2_a - Q_M2_a_star) * Q_M1_a_star / Q_M1M2_a,
+             	1 / gn_a * (Q_M2_a - Q_M2_a_star) * Q_M1_a / Q_M1M2_a,
 	    		1 / gn_a * Q_M1M2_a_star / Q_M1M2_a,
 	    		0))	    	
 	    	H_a_star_matrix <- with(nuisance_frame, 
@@ -153,14 +153,18 @@ target_Qbarbar <- function(Qbar, Qbarbar, Y, A, a, a_star, gn, M1, M2,
                            all_mediator_values, max_iter, 
                            tol = 1/(sqrt(length(Y)) * log(length(Y)))){
 	
+	# have confirmed this is correct
 	M1_times_M2_star_a <- target_Qbarbar_M1_times_M2_star_a(
 		Qbarbar = Qbarbar, Y = Y, A = A, a = a, a_star = a_star, tol = tol, gn = gn,
 		max_iter = max_iter
     )
-    M1_star_times_M2_a <- target_Qbarbar_M1_star_times_M2_a(
+
+	# have confirmed this is correct
+    M1_times_M2_a <- target_Qbarbar_M1_times_M2_a(
 		Qbarbar = Qbarbar, Y = Y, A = A, a = a, a_star = a_star, tol = tol, gn = gn,
 		max_iter = max_iter
     )
+    # have confirmed this is correct
     M1_star_times_M2_star_a <- target_Qbarbar_M1_star_times_M2_star_a(
 		Qbarbar = Qbarbar, Y = Y, A = A, a = a, a_star = a_star, tol = tol, gn = gn
     )
@@ -174,7 +178,7 @@ target_Qbarbar <- function(Qbar, Qbarbar, Y, A, a, a_star, gn, M1, M2,
     )
 
     Qbarbar$M1_times_M2_star_a <- M1_times_M2_star_a
-    Qbarbar$M1_star_times_M2_a <- M1_star_times_M2_a
+    Qbarbar$M1_times_M2_a <- M1_times_M2_a
     Qbarbar$M1_star_times_M2_star_a <- M1_star_times_M2_star_a
     Qbarbar$conditional_direct_effect <- conditional_direct_effect
     Qbarbar$M1_star_M2_star_a_star <- total_effect[[1]]
@@ -187,12 +191,13 @@ target_Qbarbar <- function(Qbar, Qbarbar, Y, A, a, a_star, gn, M1, M2,
 
 #' Function for targeting Qbarbar_M1_times_M2_star_a
 #' 
-#' Here we take an iterative approach. There are two interesting features of this 
+#' There are two interesting features of this 
 #' targeting problem. First, we see that the nuisance parameter Qbarbar_M1_times_M2_star_a
 #' can be viewed in two ways: (1) the conditional mean of Qbarbar_M1_a given C with respect
 #' to the marginal of M_2 given A = a^\star, C; (2) the conditional mean of Qbarbar_M2_star_a given C 
 #' with respect to the marginal of M_1 given A = a, C. The natural inclination then 
-#' is to use a sum loss function. However, to generate the proper score, we would need to 
+#' is to use a sum loss function. It seems that we're able to do that here.
+#' However, to generate the proper score, we would need to 
 #' consider a submodel for the conditional mean of Qbarbar_M1_a/Qbarbar_M2_star_a given A and C; 
 #' since, the inverse probability of treatment weight is a function of A. We also cannot
 #' include the IPTW as part of the loss function since we need one of the weights to be 
@@ -212,7 +217,7 @@ target_Qbarbar <- function(Qbar, Qbarbar, Y, A, a, a_star, gn, M1, M2,
 #' 
 target_Qbarbar_M1_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star, gn, 
                                         tol = 1/(sqrt(length(Y)) * log(length(Y))), 
-                                        max_iter = 25, iterative = TRUE, 
+                                        max_iter = 25, iterative = FALSE, 
                                         ...){
 	# outcome of regression = { Qbarbar_M2_star_a if A = a
 	# 						  { Qbarbar_M1_star_a if A = a_star
@@ -227,7 +232,7 @@ target_Qbarbar_M1_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star, gn,
 	
 	H_A <- rep(0, n)
 	H_A[A == a] <- 1 / gn[[2]][A == a]
-	H_A[A == a_star] <- -1 / gn[[1]][A == a_star]
+	H_A[A == a_star] <- 1 / gn[[1]][A == a_star]
 
 	if(iterative){
 		Qbarbar_M1_times_M2_star_a_tmle <- Qbarbar$M1_times_M2_star_a
@@ -285,35 +290,30 @@ target_Qbarbar_M1_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star, gn,
 			cat(mean(Pn_D), "\n")
 		}
 	}else{
-		# if not iterative, then we need to code our own intercept only logistic regression
-		# with weights, since GLM will complain about negative weights
-		nloglikloss <- function(epsilon, scaled_outcome, H_A, scaled_offset){
-			p_hat <- stats::plogis(stats::qlogis(scaled_offset) + epsilon)
-			wts <- H_A
-			loss <- - wts * log(scaled_outcome^p_hat * (1 - scaled_outcome)^(1 - p_hat))
-			risk <- mean(loss)
-			return(risk)
-		}
-		fluc_mod <- optim(par = 0, fn = nloglikloss, lower = -10, upper = 10)
+		scaled_offset <- (Qbarbar$M1_times_M2_star_a - min_Y)/(max_Y - min_Y)
+
+		fluc_data <- data.frame(
+			  scaled_outcome = scaled_outcome,
+			  H_A = H_A,
+			  scaled_offset = SuperLearner::trimLogit(scaled_offset)
+	    )
+
+	    fluc_mod <- suppressWarnings(glm(scaled_outcome ~ offset(scaled_offset),
+                    family = stats::binomial(), weights = fluc_data$H_A, 
+                    data = fluc_data, start = 0))
+	    Qbarbar_M1_times_M2_star_a_tmle <- fitted(fluc_mod)*(max_Y - min_Y) + min_Y
 	}
 	return(Qbarbar_M1_times_M2_star_a_tmle)
 }
 
-#' Function for targeting Qbarbar_M1_star_times_M2_a
+#' Function for targeting Qbarbar_M1_times_M2_a
 #' 
-#' Here we take an iterative approach. There are two interesting features of this 
-#' targeting problem. First, we see that the nuisance parameter Qbarbar_M1_star_times_M2_a
-#' can be viewed in two ways: (1) the conditional mean of Qbarbar_M1_star_a given C with respect
+#' There are two interesting features of this 
+#' targeting problem. First, we see that the nuisance parameter Qbarbar_M1_times_M2_a
+#' can be viewed in two ways: (1) the conditional mean of Qbarbar_M1_a given C with respect
 #' to the marginal of M_2 given A = a, C; (2) the conditional mean of Qbarbar_M2_a given C 
-#' with respect to the marginal of M_1 given A = a_star, C. The natural inclination then 
-#' is to use a sum loss function. However, to generate the proper score, we would need to 
-#' consider a submodel for the conditional mean of Qbarbar_M1_star_a/Qbarbar_M2_a given A and C; 
-#' since, the inverse probability of treatment weight is a function of A. We also cannot
-#' include the IPTW as part of the loss function since we need one of the weights to be 
-#' negative. So, we resort to an iterative approach, where we define a submodel and loss
-#' for the conditional mean of Qbarbar_M1_a and then a loss for the conditional mean of
-#' Qbarbar_M2_star_a. We iterate until the empirical mean of this portion of the
-#' canonical gradient is smaller than \code{tol}. 
+#' with respect to the marginal of M_1 given A = a, C. The natural inclination then 
+#' is to use a sum loss function, which it seems we can do here. 
 #' 
 #' @param Qbarbar List of marginalized parameters 
 #' @param Y The outcome
@@ -324,84 +324,103 @@ target_Qbarbar_M1_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star, gn,
 #' 
 #' @importFrom SuperLearner trimLogit
 #' 
-target_Qbarbar_M1_star_times_M2_a <- function(Qbarbar, Y, A, a, a_star, gn, 
+target_Qbarbar_M1_times_M2_a <- function(Qbarbar, Y, A, a, a_star, gn, 
                                         tol = 1/(sqrt(length(Y)) * log(length(Y))),
-                                        max_iter = 25,  
+                                        max_iter = 25,  iterative = FALSE,
                                         ...){
 	# outcome of regression = { Qbarbar_M2_a if A = a_star
-	# 						  { Qbarbar_M1_star_a if A = a
+	# 						  { Qbarbar_M1_a if A = a
 	# covariate for regression = { I(A = a)/(gn[[2]]) if A = a
 	# covariate for regression = { I(A = a_star)/(gn[[1]]) if A = a_star
 	# offset for regression = logit(Qbarbar_M1_times_M2_star_a)
 	n <- length(Qbarbar[[1]])
 	min_Y <- min(Y); max_Y <- max(Y)
-	scaled_outcome <- rep(0, n)
-	scaled_outcome[A == a] <- (Qbarbar$M1_star_a[A == a] - min_Y)/(max_Y - min_Y)
-	scaled_outcome[A == a_star] <- (Qbarbar$M2_a[A == a_star] - min_Y)/(max_Y - min_Y)
+	scaled_outcome <- c((Qbarbar$M1_a[A == a] - min_Y)/(max_Y - min_Y),
+	                    (Qbarbar$M2_a[A == a] - min_Y)/(max_Y - min_Y))
+	# scaled_outcome[A == a] <- (Qbarbar$M1_a[A == a] - min_Y)/(max_Y - min_Y)
+	# scaled_outcome[A == a_star] <- (Qbarbar$M2_a[A == a_star] - min_Y)/(max_Y - min_Y)
 	
-	H_A <- rep(0, n)
-	H_A[A == a] <- 1 / gn[[2]][A == a]
-	H_A[A == a_star] <- 1 / gn[[1]][A == a_star]
+	# H_A <- rep(0, n)
+	H_A <- rep(1 / gn[[2]][A == a], 2)
+	# H_A[A == a_star] <- 1 / gn[[1]][A == a_star]
 
-	Qbarbar_M1_star_times_M2_a_tmle <- Qbarbar$M1_star_times_M2_a
-	Pn_D <- Inf
-	iter <- 0
-	while(abs(Pn_D) > tol & iter <= max_iter){
-		iter <- iter + 1
-		# target via submodel through Qbarbar, 
-		scaled_offset <- rep(0, n)
-		scaled_offset <- (Qbarbar_M1_star_times_M2_a_tmle - min_Y)/(max_Y - min_Y)
+	if(iterative){
+		Qbarbar_M1_times_M2_a_tmle <- Qbarbar$M1_star_times_M2_a
+		Pn_D <- Inf
+		iter <- 0
+		while(abs(Pn_D) > tol & iter <= max_iter){
+			iter <- iter + 1
+			# target via submodel through Qbarbar, 
+			scaled_offset <- rep(0, n)
+			scaled_offset <- (Qbarbar_M1_times_M2_a_tmle - min_Y)/(max_Y - min_Y)
 
+			fluc_data <- data.frame(
+			  scaled_outcome = scaled_outcome,
+			  H_A = H_A,
+			  scaled_offset = SuperLearner::trimLogit(scaled_offset)
+		    )[A == a, ]
+
+		    fluc_mod <- suppressWarnings(glm(scaled_outcome ~ H_A -1 + offset(scaled_offset),
+		                    family = stats::binomial(), data = fluc_data, start = 0))
+
+			pred_data_a <- data.frame(
+			  scaled_outcome = scaled_outcome,
+			  H_A = 1 / gn[[2]],
+			  scaled_offset = SuperLearner::trimLogit(scaled_offset)	 
+	        )
+		    Qbarbar_M1_times_M2_a_tmle <- predict(fluc_mod, 
+		                                         newdata = pred_data_a,
+		                                         type = "response")*(max_Y - min_Y) + min_Y
+
+		    # now for a_star folks
+			scaled_offset <- (Qbarbar_M1_times_M2_a_tmle - min_Y)/(max_Y - min_Y)
+
+			fluc_data <- data.frame(
+			  scaled_outcome = scaled_outcome,
+			  H_A = H_A,
+			  scaled_offset = SuperLearner::trimLogit(scaled_offset)	                  	 
+		    )[A == a_star, ]
+
+		    fluc_mod <- suppressWarnings(glm(scaled_outcome ~ H_A -1 + offset(scaled_offset),
+		                    family = binomial(), data = fluc_data, start = 0))
+
+			pred_data_a_star <- data.frame(
+			  scaled_outcome = scaled_outcome,
+			  H_A = 1 / gn[[1]],
+			  scaled_offset = SuperLearner::trimLogit(scaled_offset)	 
+	        )
+		    Qbarbar_M1_times_M2_a_tmle <- predict(fluc_mod, 
+		                                         newdata = pred_data_a_star,
+		                                         type = "response")*(max_Y - min_Y) + min_Y
+
+		    D_i <- (2*as.numeric(A == a) - as.numeric(A %in% c(a,a_star))) / ifelse(A == a, gn[[2]], gn[[1]]) * 
+		    			(ifelse(A == a, Qbarbar$M1_star_a, Qbarbar$M2_a) - Qbarbar_M1_times_M2_a_tmle)
+			Pn_D <- mean(D_i)
+			cat(mean(Pn_D), "\n")
+		}
+	}else{
+		scaled_offset <- rep((Qbarbar$M1_times_M2_a[A == a] - min_Y)/(max_Y - min_Y), 2)
 		fluc_data <- data.frame(
 		  scaled_outcome = scaled_outcome,
 		  H_A = H_A,
 		  scaled_offset = SuperLearner::trimLogit(scaled_offset)
-	    )[A == a, ]
+	    )
+	    fluc_mod <- suppressWarnings(glm(scaled_outcome ~ offset(scaled_offset),
+                    family = stats::binomial(), weights = fluc_data$H_A, 
+                    data = fluc_data, start = 0))
 
-	    fluc_mod <- suppressWarnings(glm(scaled_outcome ~ H_A -1 + offset(scaled_offset),
-	                    family = stats::binomial(), data = fluc_data, start = 0))
-
-		pred_data_a <- data.frame(
-		  scaled_outcome = scaled_outcome,
-		  H_A = 1 / gn[[2]],
-		  scaled_offset = SuperLearner::trimLogit(scaled_offset)	 
-        )
-	    Qbarbar_M1_star_times_M2_a_tmle <- predict(fluc_mod, 
-	                                         newdata = pred_data_a,
-	                                         type = "response")*(max_Y - min_Y) + min_Y
-
-	    # now for a_star folks
-		scaled_offset <- (Qbarbar_M1_star_times_M2_a_tmle - min_Y)/(max_Y - min_Y)
-
-		fluc_data <- data.frame(
-		  scaled_outcome = scaled_outcome,
-		  H_A = H_A,
-		  scaled_offset = SuperLearner::trimLogit(scaled_offset)	                  	 
-	    )[A == a_star, ]
-
-	    fluc_mod <- suppressWarnings(glm(scaled_outcome ~ H_A -1 + offset(scaled_offset),
-	                    family = binomial(), data = fluc_data, start = 0))
-
-		pred_data_a_star <- data.frame(
-		  scaled_outcome = scaled_outcome,
-		  H_A = 1 / gn[[1]],
-		  scaled_offset = SuperLearner::trimLogit(scaled_offset)	 
-        )
-	    Qbarbar_M1_star_times_M2_a_tmle <- predict(fluc_mod, 
-	                                         newdata = pred_data_a_star,
-	                                         type = "response")*(max_Y - min_Y) + min_Y
-
-	    D_i <- (2*as.numeric(A == a) - as.numeric(A %in% c(a,a_star))) / ifelse(A == a, gn[[2]], gn[[1]]) * 
-	    			(ifelse(A == a, Qbarbar$M1_star_a, Qbarbar$M2_a) - Qbarbar_M1_star_times_M2_a_tmle)
-		Pn_D <- mean(D_i)
-		cat(mean(Pn_D), "\n")
+	    Qbarbar_M1_times_M2_a_tmle <- predict(fluc_mod, type = "response", newdata = data.frame(
+            scaled_outcome = Qbarbar$M1_a, # doesn't matter
+            H_A = 1 / gn[[2]],
+            scaled_offset = SuperLearner::trimLogit((Qbarbar$M1_times_M2_a - min_Y)/(max_Y - min_Y))                                                                        
+     	))*(max_Y - min_Y) + min_Y
 	}
-	return(Qbarbar_M1_star_times_M2_a_tmle)
+	return(Qbarbar_M1_times_M2_a_tmle)
 }
 
 #' Function for targeting Qbarbar_M1_star_times_M2_star_a
 #' 
-#' Here we take an iterative approach. There are two interesting features of this 
+#' There are two interesting features of this 
 #' targeting problem. First, we see that the nuisance parameter Qbarbar_M1_star_times_M2_star_a
 #' can be viewed in two ways: (1) the conditional mean of Qbarbar_M1_star_a given C with respect
 #' to the marginal of M_2 given A = a_star, C; (2) the conditional mean of Qbarbar_M2_star_a given C 
@@ -458,7 +477,7 @@ target_Qbarbar_M1_star_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star, gn,
                                          newdata = pred_data_a,
                                          type = "response")*(max_Y - min_Y) + min_Y
 	    
-    D_i <- - (as.numeric(A == a_star)/gn[[1]] * (Qbarbar$M1_star_a - Qbarbar_M1_star_times_M2_star_a_tmle)
+    D_i <- (as.numeric(A == a_star)/gn[[1]] * (Qbarbar$M1_star_a - Qbarbar_M1_star_times_M2_star_a_tmle)
     + as.numeric(A == a_star)/gn[[1]] * (Qbarbar$M2_star_a - Qbarbar_M1_star_times_M2_star_a_tmle))
 	Pn_D <- mean(D_i)
 	

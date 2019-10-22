@@ -81,7 +81,7 @@ evaluate_eif_direct <- function(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_star,
 	}
 	# unscaled_offset <- Qbarbar$M1_star_M2_star_a - Qbarbar$M1_star_M2_star_a_star
 	eif <- as.numeric(A == a)/gn[[2]] * Q_M1M2_a_star / Q_M1M2_a * (Y - Qbar_M1M2_a) -
-			 as.numeric(A == a_star)/gn[[1]] * (Y - Qbar_M1M2_a_star) -
+			 as.numeric(A == a_star)/gn[[1]] * (Y - Qbar_M1M2_a_star) +
 			 	as.numeric(A == a_star)/gn[[1]] * (Qbar_M1M2_a - Qbar_M1M2_a_star - 
 			 	                                   	conditional_effect) + 
 			 		conditional_effect - mean(conditional_effect)
@@ -202,8 +202,8 @@ evaluate_eif_indirect_M2 <- function(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_
 	                                    unique_M_values = unique_M2_values,
 	                                    mediator = "M2"),
 	                    SIMPLIFY = FALSE), use.names = FALSE)		
-	Q_M1_a_star <- unlist(mapply(Q_M_n_i = Q_M, M_i = M1, FUN = extract_marginal,
-	                    MoreArgs = list(a_val = "a_star", 
+	Q_M1_a <- unlist(mapply(Q_M_n_i = Q_M, M_i = M1, FUN = extract_marginal,
+	                    MoreArgs = list(a_val = "a", 
 	                                    unique_M_values = unique_M1_values,
 	                                    mediator = "M1"),
 	                    SIMPLIFY = FALSE), use.names = FALSE)
@@ -214,17 +214,17 @@ evaluate_eif_indirect_M2 <- function(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_
 	                                   all_mediator_values = all_mediator_values),
 	                   SIMPLIFY = FALSE), use.names = FALSE)	
     
-	eif <- as.numeric(A == a)/gn[[2]] * (Q_M2_a - Q_M2_a_star) * Q_M1_a_star / Q_M1M2_a * (Y - Qbar_M1M2_a) + 
-			as.numeric(A == a)/gn[[2]] * (Qbarbar$M1_star_a - Qbarbar$M1_star_times_M2_a) - 
-			as.numeric(A == a_star)/gn[[1]] * (Qbarbar$M1_star_a - Qbarbar$M1_star_times_M2_star_a) + 
-			as.numeric(A == a_star)/gn[[1]] * ((Qbarbar$M2_a - Qbarbar$M2_star_a) - (Qbarbar$M1_star_times_M2_a - Qbarbar$M1_star_times_M2_star_a)) + 
-				Qbarbar$M1_star_times_M2_a - Qbarbar$M1_star_times_M2_star_a - 
-					mean(Qbarbar$M1_star_times_M2_a - Qbarbar$M1_star_times_M2_star_a)
+	eif <- as.numeric(A == a)/gn[[2]] * (Q_M2_a - Q_M2_a_star) * Q_M1_a / Q_M1M2_a * (Y - Qbar_M1M2_a) + 
+			as.numeric(A == a)/gn[[2]] * (Qbarbar$M1_a - Qbarbar$M1_times_M2_a) - 
+			as.numeric(A == a_star)/gn[[1]] * (Qbarbar$M1_a - Qbarbar$M1_times_M2_star_a) + 
+			as.numeric(A == a)/gn[[2]] * ((Qbarbar$M2_a - Qbarbar$M2_star_a) - (Qbarbar$M1_times_M2_a - Qbarbar$M1_times_M2_star_a)) + 
+				Qbarbar$M1_times_M2_a - Qbarbar$M1_times_M2_star_a - 
+					mean(Qbarbar$M1_times_M2_a - Qbarbar$M1_times_M2_star_a)
 	return(eif)
 }
 
 evaluate_indirect_effect_M2 <- function(Qbarbar){
-	return(mean(Qbarbar$M1_star_times_M2_a - Qbarbar$M1_star_times_M2_star_a))
+	return(mean(Qbarbar$M1_times_M2_a - Qbarbar$M1_times_M2_star_a))
 }
 
 evaluate_covariance_effect_M1M2 <- function(Qbarbar, use_conditional){

@@ -710,6 +710,7 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
 get_Qbarbar <- function(Qbar_n, Q_M_n, unique_M1_values, unique_M2_values, all_mediator_values, ...){
  
   # get Qbarbar_M1_times_M2_star_a (indirect)
+  # @~~~@ still need this one @~~~@ 
   M1_times_M2_star_a <- mapply(FUN = get_M1_times_M2_star_a,
                                Qbar_n_i = Qbar_n,
                                Q_M_n_i = Q_M_n,
@@ -717,7 +718,9 @@ get_Qbarbar <- function(Qbar_n, Q_M_n, unique_M1_values, unique_M2_values, all_m
                                                unique_M1_values = unique_M1_values, 
                                                unique_M2_values = unique_M2_values),
                                SIMPLIFY = TRUE)
+
   # get Qbarbar_M1_star_times_M2_star_a (indirect)
+  # @~~~@ still need this one @~~~@ 
   M1_star_times_M2_star_a <- mapply(FUN = get_M1_star_times_M2_star_a,
                              Qbar_n_i = Qbar_n,
                              Q_M_n_i = Q_M_n,
@@ -726,7 +729,7 @@ get_Qbarbar <- function(Qbar_n, Q_M_n, unique_M1_values, unique_M2_values, all_m
                                              unique_M2_values = unique_M2_values),
                              SIMPLIFY = TRUE)
   # get Qbarbar_M1_star_times_M2_a (indirect)
-  M1_star_times_M2_a <- mapply(FUN = get_M1_star_times_M2_a,
+  M1_times_M2_a <- mapply(FUN = get_M1_times_M2_a,
                              Qbar_n_i = Qbar_n,
                              Q_M_n_i = Q_M_n,
                              MoreArgs = list(all_mediator_values = all_mediator_values,
@@ -796,7 +799,7 @@ get_Qbarbar <- function(Qbar_n, Q_M_n, unique_M1_values, unique_M2_values, all_m
 
   return(list(M1_times_M2_star_a = M1_times_M2_star_a,
               M1_star_times_M2_star_a = M1_star_times_M2_star_a,
-              M1_star_times_M2_a = M1_star_times_M2_a, 
+              M1_times_M2_a = M1_times_M2_a, 
               M1_star_M2_star_a_star = M1_star_M2_star_a_star,
               M1_star_M2_star_a = M1_star_M2_star_a,
               M1_M2_a = M1_M2_a,
@@ -879,18 +882,18 @@ get_M1_times_M2_star_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values, uniqu
   return(out)
 }
 
-get_M1_star_times_M2_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values, unique_M1_values, unique_M2_values){
+get_M1_times_M2_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values, unique_M1_values, unique_M2_values){
   Qbarn_a_frame <- data.frame(all_mediator_values, Qbar_n_a_i = Qbar_n_i$Qbar_a_0[[2]],
                               id = seq_along(Qbar_n_i$Qbar_a_0[[2]]))
-  Q_M1_a_star_frame <- data.frame(M1 = unique_M1_values, 
-                            Q_M1_a_star = Q_M_n_i[[1]][[2]])        
+  Q_M1_a_frame <- data.frame(M1 = unique_M1_values, 
+                            Q_M1_a = Q_M_n_i[[2]][[2]])        
   Q_M2_a_frame <- data.frame(M2 = unique_M2_values, 
                             Q_M2_a = Q_M_n_i[[2]][[3]])
 
-  nuisance_frame <- Reduce("reduce_merge", list(Qbarn_a_frame, Q_M2_a_frame, Q_M1_a_star_frame))
+  nuisance_frame <- Reduce("reduce_merge", list(Qbarn_a_frame, Q_M2_a_frame, Q_M1_a_frame))
   nuisance_frame <- nuisance_frame[order(nuisance_frame$id), ]
   out <- sum(with(nuisance_frame,
-                  Qbar_n_a_i * Q_M1_a_star * Q_M2_a))
+                  Qbar_n_a_i * Q_M1_a * Q_M2_a))
   return(out)
 }
 
