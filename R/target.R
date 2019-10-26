@@ -14,6 +14,8 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
                         Qbar_n,
                         gn,
                         Q_M_n, ...){
+
+	##~~~~~##!!!!!! NEED TO CHECK THIS FUNCTION AGAIN!!!!
 	# create clever covariates
 	# I(A_i = a)/g(a | C_i) * (Q_M1(M1_i | a, C_i) - Q_M1(M1_i | a_star, C_i)) * Q_M2(M2_i | a_star, C_i)/Q_{M1,M2}(M1_i, M2_i | a, C_i)
 	# I(A_i = a)/g(a | C_i) Q_{M1,M2}(M1_i, M2_i | a_star, C_i) / Q_{M1,M2}(M1_i, M2_i | a, C_i)
@@ -100,6 +102,7 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 	Qbar_n_tmle <- mapply(Q_M_n_i = Q_M_n, Qbar_n_i = Qbar_n, A = A,
 	       gn_a_star_i = gn[[1]], gn_a_i = gn[[2]], 
 	    FUN = function(Q_M_n_i, Qbar_n_i, A, gn_a_i, gn_a_star_i){
+	    	browser()
 	    	Q_M1_a_frame <- data.frame(M1 = unique(M1), 
 	    	                            Q_M1_a = Q_M_n_i[[2]][[2]])
 	    	Q_M1_a_star_frame <- data.frame(M1 = unique(M1), 

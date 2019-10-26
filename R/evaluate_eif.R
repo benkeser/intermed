@@ -191,7 +191,6 @@ evaluate_eif_indirect_M2 <- function(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_
                          	  all_mediator_values = all_mediator_values, 
                      		  a_val = "a"
          	                ), SIMPLIFY = FALSE), use.names = FALSE)	
-	# get an n-length vector of M1 marginal at M1_i and C_i under a_star and a
 	Q_M2_a <- unlist(mapply(Q_M_n_i = Q_M, M_i = M2, FUN = extract_marginal,
 	                    MoreArgs = list(a_val = "a", 
 	                                    unique_M_values = unique_M2_values,
