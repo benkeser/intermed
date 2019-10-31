@@ -255,10 +255,16 @@ intermed <- function(Y, C, M1, M2, A,
     Qbarbar_n <- get_Qbarbar(Qbar_n = Qbar_n, Q_M_n = Q_M_n,
                              all_mediator_values = all_mediator_values,
                              unique_M1_values = unique(M1),
+                             unique_M2_values = unique(M2))    
+
+    # marginalize targeted outcome regressions
+    Qbarbar_n_star <- get_Qbarbar(Qbar_n = Qbar_n, Q_M_n = Q_M_n,
+                             all_mediator_values = all_mediator_values,
+                             unique_M1_values = unique(M1),
                              unique_M2_values = unique(M2))
 
     # targeted them
-    Qbarbar_n_tmle <- target_Qbarbar(Qbar = Qbar_n_tmle, Qbarbar = Qbarbar_n, 
+    Qbarbar_n_tmle <- target_Qbarbar(Qbar = Qbar_n_tmle, Qbarbar = Qbarbar_n_star, 
                                      Y = Y, A = A, a = a, a_star = a_star,
                                      M1 = M1, M2 = M2, all_mediator_values = all_mediator_values,
                                      tol = tol, gn = gn, max_iter = max_iter) 
