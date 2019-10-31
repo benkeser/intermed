@@ -81,14 +81,27 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
              	                )
 	                         }, SIMPLIFY = FALSE), use.names = FALSE)
 
-	scaled_Y <- (Y - min(Y))/diff(range(Y))
-	scaled_offset <- SuperLearner::trimLogit((Qbar_M1M2C_obs - min(Y)) / diff(range(Y)))
+	# try scaling by min and max of initial Qbar
+	allQbar <- Reduce(c, lapply(Qbar_n, function(x){unlist(x[[1]], use.names = FALSE)}))
+	ell_scale <- min(allQbar)
+	u_scale <- max(allQbar)
+	scaled_Y <- (Y - ell_scale)/(u_scale - ell_scale)
+	scaled_offset <- SuperLearner::trimLogit((Qbar_M1M2C_obs - ell_scale) / (u_scale - ell_scale))
+
 	target_data <- data.frame(scaled_Y = scaled_Y, 
 	                          scaled_offset = scaled_offset, 
 	                          H1 = H1_obs, H2 = H2_obs, H3 = H3_obs, H4 = H4_obs)
-	fluc_mod <- suppressWarnings(glm(scaled_Y ~ offset(scaled_offset) -1 + H1 + H2 + H3 + H4, 
-	                data = target_data, family = binomial(), start = c(0, 0, 0, 0)))
-	epsilon <- coef(fluc_mod)
+	llik <- function(eps, data){
+		p <- plogis(data$scaled_offset + eps[1]*data$H1 + eps[2]*data$H2 + eps[3]*data$H3 + eps[4]*data$H4)
+		return(-sum(data$scaled_Y * log(p) + (1 - data$scaled_Y) * log(1 - p)))
+	}
+	fluc_mod <- optim(par = c(0,0,0,0), fn = llik, data = target_data)
+
+	# fluc_mod <- suppressWarnings(glm(scaled_Y ~ offset(scaled_offset) -1 + H1 + H2 + H3 + H4, 
+	#                 data = target_data, family = binomial(), start = c(0, 0, 0, 0)))
+	# epsilon <- coef(fluc_mod)
+	epsilon <- fluc_mod$par
+
 
 	# we'll actually need to evaluate the targeted fit under each value of (M1, M2)
 	# so go through and replace Qbar_n_i$Qbar_a_0[[1]] and [[2]] with respective values
@@ -98,7 +111,8 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 	# inner [[1]] = joint (M1, M2)
 	# inner [[2]] = marginal M1
 	# inner [[3]] = marginal M2
-	max_Y <- max(Y); min_Y <- min(Y)
+	# max_Y <- max(Y); min_Y <- min(Y)
+	max_Y <- u_scale; min_Y <- ell_scale
 	Qbar_n_tmle <- mapply(Q_M_n_i = Q_M_n, Qbar_n_i = Qbar_n, A = A,
 	       gn_a_star_i = gn[[1]], gn_a_i = gn[[2]], 
 	    FUN = function(Q_M_n_i, Qbar_n_i, A, gn_a_i, gn_a_star_i){
