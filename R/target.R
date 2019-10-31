@@ -185,7 +185,7 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 	    	nuisance_frame$Qbar_a <- Qbar_n_i$Qbar_a_0[[2]] 
 	    	nuisance_frame$gn_a_star <- gn_a_star_i
 	    	nuisance_frame$gn_a <- gn_a_i
-	    	browser()
+	    	# browser()
 			n_obs <- length(nuisance_frame$gn_a)
 			H_a_matrix <- matrix(NA, ncol = num_covariates, nrow = n_obs)
 			H_a_star_matrix <- matrix(0, ncol = num_covariates, nrow = n_obs)
