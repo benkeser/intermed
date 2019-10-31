@@ -13,7 +13,11 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
                         all_mediator_values,
                         Qbar_n,
                         gn,
-                        Q_M_n, ...){
+                        Q_M_n, 
+                        which_effects = c("direct", "indirectM1", "indirectM2"), 
+                        bound_pred = TRUE, 
+                        epsilon_threshold = 5, # truncate large epsilon values
+                        ...){
 
 	##~~~~~##!!!!!! NEED TO CHECK THIS FUNCTION AGAIN!!!!
 	# create clever covariates
@@ -59,16 +63,45 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 	# make "clever covariates"; note the first entry of gn corresponds to the probability 
 	# that A = a_star | C = C_i; the second entry of gn corresponds to the probability that 
 	# A = a | C = C_i
-	# this is for indirect effect through M1
-	H1_obs <- as.numeric(A == a)/gn[[2]] * (Q_M1_a - Q_M1_a_star) * Q_M2_a_star / Q_M1M2_a
+	# for indirect effect through M1
+	H_indirectM1_1_obs <- as.numeric(A == a)/gn[[2]] * Q_M1_a * Q_M2_a_star / Q_M1M2_a
+	H_indirectM1_2_obs <- - as.numeric(A == a)/gn[[2]] * Q_M1_a_star * Q_M2_a_star / Q_M1M2_a
+	# for indirect through M2
+	H_indirectM2_1_obs <- as.numeric(A == a)/gn[[2]] * (Q_M2_a * Q_M1_a) / Q_M1M2_a
+	H_indirectM2_2_obs <- - as.numeric(A == a)/gn[[2]] * (Q_M2_a_star * Q_M1_a) / Q_M1M2_a # -H_indirectM1_1_obs
+	# for direct
+	H_direct_1_obs <- as.numeric(A == a)/gn[[2]] * Q_M1M2_a_star / Q_M1M2_a
+	H_direct_2_obs <- as.numeric(A == a_star)/gn[[1]]
+
+	covariate_values <- NULL
+	covariate_names <- NULL
+	if("indirectM1" %in% which_effects){
+		covariate_names <- c(covariate_names, "H_indirectM1_1_obs", "H_indirectM1_2_obs")
+		covariate_values <- cbind(covariate_values, H_indirectM1_1_obs, H_indirectM1_2_obs)
+	}
+	if("indirectM2" %in% which_effects){
+		covariate_names <- c(covariate_names, "H_indirectM2_1_obs")
+		covariate_values <- cbind(covariate_values, H_indirectM2_1_obs)
+		if(!("indirectM1" %in% which_effects)){
+			covariate_names <- c(covariate_names, "H_indirectM2_2_obs")
+			covariate_values <- cbind(covariate_values, H_indirectM2_2_obs)
+		}
+	}
+	if("direct" %in% which_effects){
+		covariate_names <- c(covariate_names, "H_direct_1_obs", "H_direct_2_obs")
+		covariate_values <- cbind(covariate_values, H_direct_1_obs, H_direct_2_obs)
+	}
+	num_covariates <- dim(covariate_values)[2]
+
+	# H1_obs <- as.numeric(A == a)/gn[[2]] * (Q_M1_a - Q_M1_a_star) * Q_M2_a_star / Q_M1M2_a
 	# this is for indirect effect through M2
 	# note that there is a shared component of H1 and H2, so one could also produce
 	# three covariates to knock out the relevant terms. for now, we stick to two
-	H2_obs <- as.numeric(A == a)/gn[[2]] * (Q_M2_a - Q_M2_a_star) * Q_M1_a / Q_M1M2_a
+	# H2_obs <- as.numeric(A == a)/gn[[2]] * (Q_M2_a - Q_M2_a_star) * Q_M1_a / Q_M1M2_a
 	# this is for direct effect
-	H3_obs <- as.numeric(A == a)/gn[[2]] * Q_M1M2_a_star / Q_M1M2_a
+	# H3_obs <- as.numeric(A == a)/gn[[2]] * Q_M1M2_a_star / Q_M1M2_a
 	# this is for direct effect
-	H4_obs <- as.numeric(A == a_star)/gn[[1]]
+	# H4_obs <- as.numeric(A == a_star)/gn[[1]]
 
 	# make offset term
 	Qbar_M1M2C_obs <- unlist(mapply(Qbar_n_i = Qbar_n, A_i = A, M1_i = M1, M2_i = M2,
@@ -82,26 +115,38 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 	                         }, SIMPLIFY = FALSE), use.names = FALSE)
 
 	# try scaling by min and max of initial Qbar
-	allQbar <- Reduce(c, lapply(Qbar_n, function(x){unlist(x[[1]], use.names = FALSE)}))
-	ell_scale <- min(allQbar)
-	u_scale <- max(allQbar)
+	if(bound_pred){
+		allQbar <- Reduce(c, lapply(Qbar_n, function(x){unlist(x[[1]], use.names = FALSE)}))
+		ell_scale <- min(allQbar)
+		u_scale <- max(allQbar)
+	}else{
+		ell_scale <- min(Y)
+		u_scale <- max(Y)
+	}
 	scaled_Y <- (Y - ell_scale)/(u_scale - ell_scale)
 	scaled_offset <- SuperLearner::trimLogit((Qbar_M1M2C_obs - ell_scale) / (u_scale - ell_scale))
 
-	target_data <- data.frame(scaled_Y = scaled_Y, 
-	                          scaled_offset = scaled_offset, 
-	                          H1 = H1_obs, H2 = H2_obs, H3 = H3_obs, H4 = H4_obs)
-	llik <- function(eps, data){
-		p <- plogis(data$scaled_offset + eps[1]*data$H1 + eps[2]*data$H2 + eps[3]*data$H3 + eps[4]*data$H4)
-		return(-sum(data$scaled_Y * log(p) + (1 - data$scaled_Y) * log(1 - p)))
+	target_data <- data.frame(covariate_values,
+	                          scaled_Y = scaled_Y, 
+	                          scaled_offset = scaled_offset)
+	colnames(target_data)[1:num_covariates] <- paste0("H", 1:num_covariates)
+
+	if(bound_pred){
+		llik <- function(eps, data){
+			p <- plogis(data$scaled_offset + as.matrix(data[,1:num_covariates]) %*% eps)
+			return(-sum(data$scaled_Y * log(p) + (1 - data$scaled_Y) * log(1 - p)))
+		}
+		fluc_mod <- optim(par = rep(0, num_covariates), fn = llik, data = target_data)
+		epsilon <- fluc_mod$par
+	}else{
+		fluc_mod <- suppressWarnings(glm(as.formula(paste0("scaled_Y ~ offset(scaled_offset) -1 + ",
+		                                                   paste0("H", 1:num_covariates, collapse = "+"))), 
+		                data = target_data, family = binomial(), start = rep(0, num_covariates)))
+		epsilon <- coef(fluc_mod)
 	}
-	fluc_mod <- optim(par = c(0,0,0,0), fn = llik, data = target_data)
-
-	# fluc_mod <- suppressWarnings(glm(scaled_Y ~ offset(scaled_offset) -1 + H1 + H2 + H3 + H4, 
-	#                 data = target_data, family = binomial(), start = c(0, 0, 0, 0)))
-	# epsilon <- coef(fluc_mod)
-	epsilon <- fluc_mod$par
-
+	# truncate epsilon
+	epsilon[epsilon > epsilon_threshold] <- epsilon_threshold
+	epsilon[epsilon < -epsilon_threshold] <- -epsilon_threshold
 
 	# we'll actually need to evaluate the targeted fit under each value of (M1, M2)
 	# so go through and replace Qbar_n_i$Qbar_a_0[[1]] and [[2]] with respective values
@@ -140,15 +185,33 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 	    	nuisance_frame$Qbar_a <- Qbar_n_i$Qbar_a_0[[2]] 
 	    	nuisance_frame$gn_a_star <- gn_a_star_i
 	    	nuisance_frame$gn_a <- gn_a_i
-
-	    	H_a_matrix <- with(nuisance_frame, cbind(
-             	1 / gn_a * (Q_M1_a - Q_M1_a_star) * Q_M2_a_star / Q_M1M2_a,
-             	1 / gn_a * (Q_M2_a - Q_M2_a_star) * Q_M1_a / Q_M1M2_a,
-	    		1 / gn_a * Q_M1M2_a_star / Q_M1M2_a,
-	    		0))	    	
-	    	H_a_star_matrix <- with(nuisance_frame, 
-	    	                        cbind(0, 0, 0, 1 / gn_a_star))
-
+	    	browser()
+			n_obs <- length(nuisance_frame$gn_a)
+			H_a_matrix <- matrix(NA, ncol = num_covariates, nrow = n_obs)
+			H_a_star_matrix <- matrix(0, ncol = num_covariates, nrow = n_obs)
+			ct <- 0
+			if("indirectM1" %in% which_effects){
+				ct <- ct + 1
+				H_a_matrix[,ct] <- with(nuisance_frame, 1 / gn_a * Q_M1_a * Q_M2_a_star / Q_M1M2_a)
+				ct <- ct + 1
+				H_a_matrix[,ct] <- with(nuisance_frame, - 1 / gn_a * Q_M1_a_star * Q_M2_a_star / Q_M1M2_a)
+			}
+			if("indirectM2" %in% which_effects){
+				ct <- ct + 1
+				H_a_matrix[,ct] <- with(nuisance_frame, 1 / gn_a * Q_M2_a * Q_M1_a / Q_M1M2_a)
+				if(!("indirectM1" %in% which_effects)){
+					ct <- ct + 1
+					H_a_matrix[,ct] <- with(nuisance_frame, - 1 / gn_a * Q_M2_a_star * Q_M1_a / Q_M1M2_a)
+				}
+			}
+			if("direct" %in% which_effects){
+				ct <- ct + 1
+				H_a_matrix[,ct] <- with(nuisance_frame, 1 / gn_a * Q_M1M2_a_star / Q_M1M2_a)
+				ct <- ct + 1
+				H_a_matrix[,ct] <- 0
+				H_a_star_matrix[,dim(H_a_star_matrix[2])] <- with(nuisance_frame, 1 / gn_a_star)
+			}
+   	
 	    	Qbar_tmle_a <- with(nuisance_frame, 
                 plogis(logit_Qbar_a + H_a_matrix %*% epsilon)*(max_Y - min_Y) + min_Y
            	)
