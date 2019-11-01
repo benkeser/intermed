@@ -658,8 +658,8 @@ target_conditional_direct_effect <- function(Qbarbar, all_mediator_values, gn,
     				current_loss <- nllik(new_scaled_conditional_direct_effect, scaled_outcome, A, a_star)
     				all_loss[iter] <- current_loss
     				old_scaled_conditional_direct_effect <- new_scaled_conditional_direct_effect
-	    			conditional_direct_effect <- new_scaled_conditional_direct_effect * (u - ell) + ell
-					cur_deriv <- mean(as.numeric(A == a_star)/gn[[1]] * (Qbar_M1M2_a - Qbar_M1M2_a_star - conditional_direct_effect))
+	    			cond_direct_effect <- new_scaled_conditional_direct_effect * (u - ell) + ell
+					cur_deriv <- mean(as.numeric(A == a_star)/gn[[1]] * (Qbar_M1M2_a - Qbar_M1M2_a_star - cond_direct_effect))
 					all_deriv[iter] <- cur_deriv
     			}
 				final_deriv <- cur_deriv
