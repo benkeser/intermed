@@ -258,7 +258,7 @@ intermed <- function(Y, C, M1, M2, A,
                              unique_M2_values = unique(M2))    
 
     # marginalize targeted outcome regressions
-    Qbarbar_n_star <- get_Qbarbar(Qbar_n = Qbar_n, Q_M_n = Q_M_n,
+    Qbarbar_n_star <- get_Qbarbar(Qbar_n = Qbar_n_tmle, Q_M_n = Q_M_n,
                              all_mediator_values = all_mediator_values,
                              unique_M1_values = unique(M1),
                              unique_M2_values = unique(M2))

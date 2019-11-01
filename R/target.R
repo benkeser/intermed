@@ -18,7 +18,9 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
                         bound_pred = TRUE, 
                         epsilon_threshold = 5, # truncate large epsilon values
                         ...){
-
+	if(!all(Y %in% c(0,1)) & bound_pred){
+		stop("Bounding targeted estimates by initial estimates may only work for binary outcomes")
+	}
 	##~~~~~##!!!!!! NEED TO CHECK THIS FUNCTION AGAIN!!!!
 	# create clever covariates
 	# I(A_i = a)/g(a | C_i) * (Q_M1(M1_i | a, C_i) - Q_M1(M1_i | a_star, C_i)) * Q_M2(M2_i | a_star, C_i)/Q_{M1,M2}(M1_i, M2_i | a, C_i)
@@ -580,9 +582,14 @@ target_Qbarbar_M1_star_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star, gn,
 
 target_conditional_direct_effect <- function(Qbarbar, all_mediator_values, gn,
                                              Qbar, # should come in as TMLE
-                                             Y, A, a, a_star, M1, M2, ...){
+                                             Y, A, a, a_star, M1, M2, 
+                                             target_conditional = TRUE,
+                                             epsilon_threshold = 5, 
+                                             universal = TRUE, 
+                                             deps = 1e-5, 
+                                             max_iter = 10000, ...){
 	n <- length(Qbarbar[[1]])
-	min_Y <- min(Y); max_Y <- max(Y)
+	
 	Qbar_M1M2_a <- unlist(mapply(Qbar_n_i = Qbar, M1_i = M1, M2_i = M2,
 	                             FUN = extract_Qbar_obs,
 	                             MoreArgs = list( 
@@ -596,37 +603,120 @@ target_conditional_direct_effect <- function(Qbarbar, all_mediator_values, gn,
                          		  a_val = "a_star"
              	                ), SIMPLIFY = FALSE), use.names = FALSE)
 
-	ell <- min_Y - max_Y; u <- max_Y - min_Y
-	scaled_outcome <- (Qbar_M1M2_a - Qbar_M1M2_a_star - ell)/(u - ell)
+	# enforce that targeted estimates don't stray out of range of initial estimates
 
-	H_A <- as.numeric(A == a_star) / gn[[1]]
-	
-	unscaled_offset <- Qbarbar$M1_star_M2_star_a - Qbarbar$M1_star_M2_star_a_star
-	scaled_offset <- (unscaled_offset - ell)/(u - ell)
+	if(target_conditional){
+		min_Y <- min(Y); max_Y <- max(Y)
+		ell <- min_Y - max_Y; u <- max_Y - min_Y
 
-	fluc_data <- data.frame(
-	  scaled_outcome = scaled_outcome,
-	  H_A = H_A,
-	  scaled_offset = SuperLearner::trimLogit(scaled_offset)
-    )
+		scaled_outcome <- (Qbar_M1M2_a - Qbar_M1M2_a_star - ell)/(u - ell)
 
-	fluc_mod <- suppressWarnings(glm(scaled_outcome ~ offset(scaled_offset),
-                    family = stats::binomial(), weights = fluc_data$H_A, 
-                    data = fluc_data, start = 0))
+		H_A <- as.numeric(A == a_star) / gn[[1]]
+		
+		unscaled_offset <- Qbarbar$M1_star_M2_star_a - Qbarbar$M1_star_M2_star_a_star
+		scaled_offset_out <- (unscaled_offset - ell)/(u - ell)
 
-	pred_data_a <- data.frame(
-	  scaled_outcome = Qbarbar$M1_star_a, # doesn't matter
-	  H_A = 1 / gn[[1]],
-	  scaled_offset = SuperLearner::trimLogit(scaled_offset)	 
-    )
-    cond_direct_effect <- predict(fluc_mod, 
-                                  newdata = pred_data_a,
-                                  type = "response")*(u - ell) + ell
-	    
-    D_i <- - as.numeric(A == a_star)/gn[[1]] * (Qbar_M1M2_a - Qbar_M1M2_a_star - cond_direct_effect)
-	Pn_D <- mean(D_i)
-	
+		fluc_data <- data.frame(
+		  scaled_outcome = scaled_outcome,
+		  H_A = H_A,
+		  scaled_offset = SuperLearner::trimLogit(scaled_offset_out)
+	    )
+
+		if(!bound_pred){
+			if(!universal){
+				pred_data_a <- data.frame(
+					  scaled_outcome = 0, # doesn't matter
+					  H_A = 1 / gn[[1]],
+					  scaled_offset = SuperLearner::trimLogit(scaled_offset_out)	 
+			    )
+				fluc_mod <- suppressWarnings(glm(scaled_outcome ~ -1 + offset(scaled_offset) + H_A,
+			                    family = stats::binomial(), data = fluc_data, start = 0))
+
+			    cond_direct_effect <- predict(fluc_mod, 
+			                                  newdata = pred_data_a,
+			                                  type = "response")*(u - ell) + ell
+			}else{
+				init_deriv <- mean(as.numeric(A == a_star)/gn[[1]] * (Qbar_M1M2_a - Qbar_M1M2_a_star - (Qbarbar$M1_star_M2_star_a - Qbarbar$M1_star_M2_star_a_star)))
+			    if(init_deriv < 0){
+			    	deps <- -deps
+			    }
+			    nllik <- function(scaled_conditional_direct_effect, scaled_outcome, A, a_star){
+			        -sum(as.numeric(A == a_star) * 
+			             	(scaled_outcome * log(scaled_conditional_direct_effect) + 
+			             	 (1 - scaled_outcome) * log(1 - scaled_conditional_direct_effect)))
+    			}
+    			current_loss <- nllik(scaled_offset_out, scaled_outcome, A, a_star)
+    			previous_loss <- Inf
+    			old_scaled_conditional_direct_effect <- scaled_offset_out
+    			iter <- 0
+    			all_loss <- all_deriv <- rep(NA, max_iter)
+    			while(previous_loss >= current_loss & iter < max_iter){
+    				iter <- iter + 1
+    				previous_loss <- current_loss
+    				new_scaled_conditional_direct_effect <- plogis(SuperLearner::trimLogit(old_scaled_conditional_direct_effect) + deps * 1 / gn[[1]])
+    				current_loss <- nllik(new_scaled_conditional_direct_effect, scaled_outcome, A, a_star)
+    				all_loss[iter] <- current_loss
+    				old_scaled_conditional_direct_effect <- new_scaled_conditional_direct_effect
+	    			conditional_direct_effect <- new_scaled_conditional_direct_effect * (u - ell) + ell
+					cur_deriv <- mean(as.numeric(A == a_star)/gn[[1]] * (Qbar_M1M2_a - Qbar_M1M2_a_star - conditional_direct_effect))
+					all_deriv[iter] <- cur_deriv
+    			}
+				final_deriv <- cur_deriv
+			}
+		}else{
+			stop("nothing here")
+		}
+	}else{
+
+		# target QbarbarM1_star_m2_star_a
+		ell <- min(Qbar_M1M2_a); u <- max(Qbar_M1M2_a)
+		scaled_outcome <- (Qbar_M1M2_a - ell)/(u - ell)
+
+		H_A <- as.numeric(A == a_star) / gn[[1]]
+		
+		scaled_offset_out <- (Qbarbar$M1_star_M2_star_a  - ell)/(u - ell)
+
+		fluc_data <- data.frame(
+		  scaled_outcome = scaled_outcome,
+		  H_A = H_A,
+		  scaled_offset = SuperLearner::trimLogit(scaled_offset_out)
+	    )
+	    fluc_mod <- suppressWarnings(glm(scaled_outcome ~ -1 + offset(scaled_offset) + H_A,
+		                    family = stats::binomial(), data = fluc_data, start = 0))
+
+		pred_data_a <- data.frame(
+		  scaled_outcome = 0, # doesn't matter
+		  H_A = 1 / gn[[1]],
+		  scaled_offset = SuperLearner::trimLogit(scaled_offset_out)	 
+	    )
+	    Qbar_M1M2_a_tmle <- predict(fluc_mod, newdata = pred_data_a, type = "response")*(u - ell) + ell
+
+	 	# target QbarbarM1_star_m2_star_a_star
+		ell <- min(Qbar_M1M2_a_star); u <- max(Qbar_M1M2_a_star)
+		scaled_outcome <- (Qbar_M1M2_a_star - ell)/(u - ell)
+
+		H_A <- as.numeric(A == a_star) / gn[[1]]
+		
+		scaled_offset_out <- (Qbarbar$M1_star_M2_star_a_star  - ell)/(u - ell)
+
+		fluc_data <- data.frame(
+		  scaled_outcome = scaled_outcome,
+		  H_A = H_A,
+		  scaled_offset = SuperLearner::trimLogit(scaled_offset_out)
+	    )
+	    fluc_mod <- suppressWarnings(glm(scaled_outcome ~ -1 + offset(scaled_offset) + H_A,
+		                    family = stats::binomial(), data = fluc_data, start = 0))
+
+		pred_data_a <- data.frame(
+		  scaled_outcome = 0, # doesn't matter
+		  H_A = 1 / gn[[1]],
+		  scaled_offset = SuperLearner::trimLogit(scaled_offset_out)	 
+	    )
+	    Qbar_M1M2_a_star_tmle <- predict(fluc_mod, newdata = pred_data_a, type = "response")*(u - ell) + ell
+	       
+	}
 	return(cond_direct_effect)
+	}
 }
 
 
