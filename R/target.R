@@ -585,6 +585,7 @@ target_conditional_direct_effect <- function(Qbarbar, all_mediator_values, gn,
                                              Y, A, a, a_star, M1, M2, 
                                              target_conditional = TRUE,
                                              epsilon_threshold = 5, 
+                                             bound_pred = TRUE, 
                                              universal = TRUE, 
                                              deps = 1e-5, 
                                              max_iter = 10000, ...){
