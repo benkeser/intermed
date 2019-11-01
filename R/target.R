@@ -716,7 +716,6 @@ target_conditional_direct_effect <- function(Qbarbar, all_mediator_values, gn,
 	       
 	}
 	return(cond_direct_effect)
-	}
 }
 
 
