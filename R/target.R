@@ -652,6 +652,7 @@ target_conditional_direct_effect <- function(Qbarbar, all_mediator_values, gn,
     			iter <- 0
     			all_loss <- all_deriv <- rep(NA, max_iter)
     			cur_deriv <- init_deriv
+    			cond_direct_effect <- scaled_offset_out
     			while(previous_loss >= current_loss & iter < max_iter & 
     			      abs(cur_deriv) > 1/(sqrt(n) * log(n))){
     				iter <- iter + 1
