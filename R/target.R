@@ -651,7 +651,9 @@ target_conditional_direct_effect <- function(Qbarbar, all_mediator_values, gn,
     			old_scaled_conditional_direct_effect <- scaled_offset_out
     			iter <- 0
     			all_loss <- all_deriv <- rep(NA, max_iter)
-    			while(previous_loss >= current_loss & iter < max_iter){
+    			cur_deriv <- init_deriv
+    			while(previous_loss >= current_loss & iter < max_iter & 
+    			      abs(cur_deriv) > 1/(sqrt(n) * log(n))){
     				iter <- iter + 1
     				previous_loss <- current_loss
     				new_scaled_conditional_direct_effect <- plogis(SuperLearner::trimLogit(old_scaled_conditional_direct_effect) + deps * 1 / gn[[1]])
