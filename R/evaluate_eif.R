@@ -79,8 +79,10 @@ evaluate_eif_direct <- function(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_star,
 	}else{
 		conditional_effect <- Qbarbar$conditional_direct_effect
 	}
+	H_bound <- sqrt(n)
+	H_dens <- pmin(Q_M1M2_a_star / Q_M1M2_a, H_bound)
 	# unscaled_offset <- Qbarbar$M1_star_M2_star_a - Qbarbar$M1_star_M2_star_a_star
-	eif <- as.numeric(A == a)/gn[[2]] * Q_M1M2_a_star / Q_M1M2_a * (Y - Qbar_M1M2_a) -
+	eif <- as.numeric(A == a)/gn[[2]] * H_dens * (Y - Qbar_M1M2_a) -
 			 as.numeric(A == a_star)/gn[[1]] * (Y - Qbar_M1M2_a_star) +
 			 	as.numeric(A == a_star)/gn[[1]] * (Qbar_M1M2_a - Qbar_M1M2_a_star - 
 			 	                                   	conditional_effect) + 
@@ -149,7 +151,11 @@ evaluate_eif_indirect_M1 <- function(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_
 	                                   all_mediator_values = all_mediator_values),
 	                   SIMPLIFY = FALSE), use.names = FALSE)	
     
-	eif <- as.numeric(A == a)/gn[[2]] * (Q_M1_a - Q_M1_a_star) * Q_M2_a_star / Q_M1M2_a * (Y - Qbar_M1M2_a) + 
+    H_dens <- (Q_M1_a - Q_M1_a_star) * Q_M2_a_star / Q_M1M2_a
+    H_bound <- sqrt(n)
+    H_dens[H_dens > H_bound] <- H_bound
+    H_dens[H_dens < -H_bound] <- -H_bound
+	eif <- as.numeric(A == a)/gn[[2]] * H_dens * (Y - Qbar_M1M2_a) + 
 			as.numeric(A == a)/gn[[2]] * (Qbarbar$M2_star_a - Qbarbar$M1_times_M2_star_a) - 
 			as.numeric(A == a_star)/gn[[1]] * (Qbarbar$M2_star_a - Qbarbar$M1_star_times_M2_star_a) + 
 			as.numeric(A == a_star)/gn[[1]] * ((Qbarbar$M1_a - Qbarbar$M1_star_a) - (Qbarbar$M1_times_M2_star_a - Qbarbar$M1_star_times_M2_star_a)) + 
@@ -213,7 +219,11 @@ evaluate_eif_indirect_M2 <- function(Y, A, M1, M2, Qbar, Q_M, Qbarbar, gn, a, a_
 	                                   all_mediator_values = all_mediator_values),
 	                   SIMPLIFY = FALSE), use.names = FALSE)	
     
-	eif <- as.numeric(A == a)/gn[[2]] * (Q_M2_a - Q_M2_a_star) * Q_M1_a / Q_M1M2_a * (Y - Qbar_M1M2_a) + 
+    H_bound <- sqrt(n)
+    H_dens <- (Q_M2_a - Q_M2_a_star) * Q_M1_a / Q_M1M2_a
+    H_dens[H_dens > H_bound] <- H_bound
+    H_dens[H_dens < -H_bound] <- -H_bound
+	eif <- as.numeric(A == a)/gn[[2]] * H_dens * (Y - Qbar_M1M2_a) + 
 			as.numeric(A == a)/gn[[2]] * (Qbarbar$M1_a - Qbarbar$M1_times_M2_a) - 
 			as.numeric(A == a_star)/gn[[1]] * (Qbarbar$M1_a - Qbarbar$M1_times_M2_star_a) + 
 			as.numeric(A == a)/gn[[2]] * ((Qbarbar$M2_a - Qbarbar$M2_star_a) - (Qbarbar$M1_times_M2_a - Qbarbar$M1_times_M2_star_a)) + 

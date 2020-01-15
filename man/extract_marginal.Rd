@@ -5,8 +5,14 @@
 \title{Helper function for extracting marginal distributions at particular values of 
 the mediator.}
 \usage{
-extract_marginal(Q_M_n_i, mediator = "M1", M_i, unique_M_values,
-  a_val = "a_star", ...)
+extract_marginal(
+  Q_M_n_i,
+  mediator = "M1",
+  M_i,
+  unique_M_values,
+  a_val = "a_star",
+  ...
+)
 }
 \arguments{
 \item{Q_M_n_i}{An entry in the \code{Q_M_n} list, where the first entry in the list

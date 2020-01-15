@@ -5,8 +5,7 @@
 \title{Helper function for extracting joint distributions at particular values of 
 the mediator.}
 \usage{
-extract_joint(Q_M_n_i, M1_i, M2_i, all_mediator_values, a_val = "a_star",
-  ...)
+extract_joint(Q_M_n_i, M1_i, M2_i, all_mediator_values, a_val = "a_star", ...)
 }
 \arguments{
 \item{Q_M_n_i}{An entry in the \code{Q_M_n} list, where the first entry in the list
@@ -26,11 +25,6 @@ which entry in \code{Q_M_n_i} that corresponds to values specified in \code{M1_i
 are \code{"a_star"} and \code{"a"}}
 
 \item{...}{Not used}
-
-\item{M1_i}{The particular value of \code{M1} at which you are interested in evaluating the joint density.
-Note that the general idea is to \code{mapply} over this function to extract the joint
-under each observed value of \code{C} and extract the marginal distribution at the corresponding
-value of \code{M1} and \code{M2}.}
 }
 \description{
 Helper function for extracting joint distributions at particular values of 

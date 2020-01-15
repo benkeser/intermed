@@ -108,8 +108,9 @@ estimate_Qbar <- function(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Qbar, glm_Qbar = N
           Qn <- sapply(a_0, function(x) {
             as.numeric(stats::predict(
               fm,
-              newdata = suppressWarnings(data.frame(A = x, M1 = all_mediator_values$M1, 
-                                   M2 = all_mediator_values$M2, validC[i, , drop = FALSE])),
+              newdata = suppressWarnings(data.frame(A = x, validC[i, , drop = FALSE], 
+                                                    M1 = all_mediator_values$M1, 
+                                                    M2 = all_mediator_values$M2)),
               onlySL = TRUE
             )[[1]])
           }, simplify = FALSE)
@@ -132,8 +133,8 @@ estimate_Qbar <- function(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Qbar, glm_Qbar = N
         Qbar_list <- vector(mode = "list", length = valid_n)
         for(i in seq_len(valid_n)){
           Qn <- sapply(a_0, function(x) {
-            as.numeric(stats::predict(object = fm$fit, newdata = data.frame(A = x, M1 = all_mediator_values$M1, 
-                                   M2 = all_mediator_values$M2, validC[i, , drop = FALSE])
+            as.numeric(stats::predict(object = fm$fit, newdata = data.frame(A = x, validC[i, , drop = FALSE], M1 = all_mediator_values$M1, 
+                                   M2 = all_mediator_values$M2)
             ))  
           }, simplify = FALSE)
           idx_M1 <- which(all_mediator_values$M1 == validM1[i])
@@ -436,13 +437,14 @@ reorder_list <- function(a_list,
 #' @param valid_rows A \code{list} of length \code{cvFolds} containing the row
 #'  indexes of observations to include in validation fold.
 #' @param ... Additional arguments (not currently used)
-#'
+#' @param return_list_by_a_0 For power users, return the list prior to reformatting
 #' @importFrom SuperLearner SuperLearner trimLogit
 #' @importFrom stats predict glm as.formula
 #
 estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a_0, stratify,
                       verbose = FALSE, return_models = FALSE,
-                      valid_rows, all_mediator_values, ...) {
+                      valid_rows, all_mediator_values, 
+                      return_list_by_a_0 = FALSE, ...) {
   if (is.null(SL_Q_M) & is.null(glm_Q_M)) {
     stop("Specify Super Learner library or GLM formula for Q_M")
   }
@@ -690,7 +692,7 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
                          SIMPLIFY = FALSE)    
     }
   }
-  out <- list(Q_M_list = Q_M_list, fm = NULL)
+  out <- list(Q_M_list = Q_M_list, fm = NULL, list_by_a_0 = NULL)
 
   if (return_models) {
     if(!stratify){
@@ -698,6 +700,9 @@ estimate_Q_M <- function(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a
     }else{
       out$fm <- fm
     }
+  }
+  if(return_list_by_a_0){
+    out$list_by_a_0 <- list_by_a_0
   }
   return(out)
 }

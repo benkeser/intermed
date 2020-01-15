@@ -4,9 +4,18 @@
 \alias{target_Qbarbar_M1_times_M2_star_a}
 \title{Function for targeting Qbarbar_M1_times_M2_star_a}
 \usage{
-target_Qbarbar_M1_times_M2_star_a(Qbarbar, Y, A, a, a_star, gn,
-  tol = 1/(sqrt(length(Y)) * log(length(Y))), max_iter = 25,
-  iterative = TRUE, ...)
+target_Qbarbar_M1_times_M2_star_a(
+  Qbarbar,
+  Y,
+  A,
+  a,
+  a_star,
+  gn,
+  tol = 1/(sqrt(length(Y)) * log(length(Y))),
+  max_iter = 25,
+  iterative = FALSE,
+  ...
+)
 }
 \arguments{
 \item{Qbarbar}{List of marginalized parameters}
@@ -24,12 +33,13 @@ target_Qbarbar_M1_times_M2_star_a(Qbarbar, Y, A, a, a_star, gn,
 \item{iterative}{Should iterative implementation be used?}
 }
 \description{
-Here we take an iterative approach. There are two interesting features of this 
+There are two interesting features of this 
 targeting problem. First, we see that the nuisance parameter Qbarbar_M1_times_M2_star_a
 can be viewed in two ways: (1) the conditional mean of Qbarbar_M1_a given C with respect
 to the marginal of M_2 given A = a^\star, C; (2) the conditional mean of Qbarbar_M2_star_a given C 
 with respect to the marginal of M_1 given A = a, C. The natural inclination then 
-is to use a sum loss function. However, to generate the proper score, we would need to 
+is to use a sum loss function. It seems that we're able to do that here.
+However, to generate the proper score, we would need to 
 consider a submodel for the conditional mean of Qbarbar_M1_a/Qbarbar_M2_star_a given A and C; 
 since, the inverse probability of treatment weight is a function of A. We also cannot
 include the IPTW as part of the loss function since we need one of the weights to be 

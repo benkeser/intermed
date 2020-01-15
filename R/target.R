@@ -18,9 +18,9 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
                         bound_pred = TRUE, 
                         epsilon_threshold = 5, # truncate large epsilon values
                         ...){
-	if(!all(Y %in% c(0,1)) & bound_pred){
-		stop("Bounding targeted estimates by initial estimates may only work for binary outcomes")
-	}
+	# if(!all(Y %in% c(0,1)) & bound_pred){
+	# 	stop("Bounding targeted estimates by initial estimates may only work for binary outcomes")
+	# }
 	##~~~~~##!!!!!! NEED TO CHECK THIS FUNCTION AGAIN!!!!
 	# create clever covariates
 	# I(A_i = a)/g(a | C_i) * (Q_M1(M1_i | a, C_i) - Q_M1(M1_i | a_star, C_i)) * Q_M2(M2_i | a_star, C_i)/Q_{M1,M2}(M1_i, M2_i | a, C_i)
@@ -66,14 +66,22 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 	# that A = a_star | C = C_i; the second entry of gn corresponds to the probability that 
 	# A = a | C = C_i
 	# for indirect effect through M1
+	n <- length(Y)
+	H_bound <- sqrt(n) # try it out
 	H_indirectM1_1_obs <- as.numeric(A == a)/gn[[2]] * Q_M1_a * Q_M2_a_star / Q_M1M2_a
+	H_indirectM1_1_obs[H_indirectM1_1_obs > H_bound] <- H_bound
 	H_indirectM1_2_obs <- - as.numeric(A == a)/gn[[2]] * Q_M1_a_star * Q_M2_a_star / Q_M1M2_a
+	H_indirectM1_2_obs[H_indirectM1_2_obs < -H_bound] <- -H_bound
 	# for indirect through M2
 	H_indirectM2_1_obs <- as.numeric(A == a)/gn[[2]] * (Q_M2_a * Q_M1_a) / Q_M1M2_a
+	H_indirectM2_1_obs[H_indirectM2_1_obs > H_bound] <- H_bound
 	H_indirectM2_2_obs <- - as.numeric(A == a)/gn[[2]] * (Q_M2_a_star * Q_M1_a) / Q_M1M2_a # -H_indirectM1_1_obs
+	H_indirectM2_2_obs[H_indirectM2_2_obs < -H_bound] <- -H_bound
 	# for direct
 	H_direct_1_obs <- as.numeric(A == a)/gn[[2]] * Q_M1M2_a_star / Q_M1M2_a
+	H_direct_1_obs[H_direct_1_obs > H_bound] <- H_bound
 	H_direct_2_obs <- as.numeric(A == a_star)/gn[[1]]
+	H_direct_2_obs[H_direct_2_obs > H_bound] <- H_bound
 
 	covariate_values <- NULL
 	covariate_names <- NULL

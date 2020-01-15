@@ -4,9 +4,24 @@
 \alias{estimate_Q_M}
 \title{estimate_Q_M}
 \usage{
-estimate_Q_M(A, M1, M2, C, DeltaA, DeltaM, SL_Q_M, glm_Q_M = NULL, a_0,
-  stratify, verbose = FALSE, return_models = FALSE, valid_rows,
-  all_mediator_values, ...)
+estimate_Q_M(
+  A,
+  M1,
+  M2,
+  C,
+  DeltaA,
+  DeltaM,
+  SL_Q_M,
+  glm_Q_M = NULL,
+  a_0,
+  stratify,
+  verbose = FALSE,
+  return_models = FALSE,
+  valid_rows,
+  all_mediator_values,
+  return_list_by_a_0 = FALSE,
+  ...
+)
 }
 \arguments{
 \item{A}{A vector of binary treatment assignment (assumed to be equal to 0 or
@@ -42,6 +57,8 @@ outcome regression, propensity score, and reduced-dimension regressions.}
 indexes of observations to include in validation fold.}
 
 \item{all_mediator_values}{All combinations of M1 and M2}
+
+\item{return_list_by_a_0}{For power users, return the list prior to reformatting}
 
 \item{...}{Additional arguments (not currently used)}
 

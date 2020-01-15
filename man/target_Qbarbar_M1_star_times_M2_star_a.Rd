@@ -4,8 +4,16 @@
 \alias{target_Qbarbar_M1_star_times_M2_star_a}
 \title{Function for targeting Qbarbar_M1_star_times_M2_star_a}
 \usage{
-target_Qbarbar_M1_star_times_M2_star_a(Qbarbar, Y, A, a, a_star, gn,
-  tol = 1/(sqrt(length(Y)) * log(length(Y))), ...)
+target_Qbarbar_M1_star_times_M2_star_a(
+  Qbarbar,
+  Y,
+  A,
+  a,
+  a_star,
+  gn,
+  tol = 1/(sqrt(length(Y)) * log(length(Y))),
+  ...
+)
 }
 \arguments{
 \item{Qbarbar}{List of marginalized parameters}
@@ -21,7 +29,7 @@ target_Qbarbar_M1_star_times_M2_star_a(Qbarbar, Y, A, a, a_star, gn,
 \item{tol}{Tolerance for iterative TMLE}
 }
 \description{
-Here we take an iterative approach. There are two interesting features of this 
+There are two interesting features of this 
 targeting problem. First, we see that the nuisance parameter Qbarbar_M1_star_times_M2_star_a
 can be viewed in two ways: (1) the conditional mean of Qbarbar_M1_star_a given C with respect
 to the marginal of M_2 given A = a_star, C; (2) the conditional mean of Qbarbar_M2_star_a given C 

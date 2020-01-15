@@ -5,8 +5,7 @@
 \title{Helper function for extracting Qbar at the observed values of confounders and
 mediators under \code{a} or \code{a_star}}
 \usage{
-extract_Qbar_obs(Qbar_n_i, M1_i, M2_i, all_mediator_values,
-  a_val = "a_star")
+extract_Qbar_obs(Qbar_n_i, M1_i, M2_i, all_mediator_values, a_val = "a_star")
 }
 \description{
 Helper function for extracting Qbar at the observed values of confounders and

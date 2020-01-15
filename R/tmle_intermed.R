@@ -82,9 +82,9 @@ intermed <- function(Y, C, M1, M2, A,
     n_mediator_values <- nrow(all_mediator_values)
 
 	# check for user input Q and g 
-	#! TO DO: Add list for M1, M2 joint dist
 	Qbar_n_user <- !is.null(Qbar_n)
-    gn_user <- !is.null(gn)
+  gn_user <- !is.null(gn)
+  Q_M_n_user <- !is.null(Q_M_n)
 
     # make validation row list for super learner
 	valid_rows <- drtmle:::make_validRows(cvFolds, n = n, n_SL = n_SL)

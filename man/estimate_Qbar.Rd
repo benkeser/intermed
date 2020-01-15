@@ -4,9 +4,25 @@
 \alias{estimate_Qbar}
 \title{estimate_Qbar}
 \usage{
-estimate_Qbar(Y, A, M1, M2, C, DeltaA, DeltaM, SL_Qbar, glm_Qbar = NULL,
-  a_0, stratify, family, verbose = FALSE, return_models = FALSE,
-  valid_rows, all_mediator_values, ...)
+estimate_Qbar(
+  Y,
+  A,
+  M1,
+  M2,
+  C,
+  DeltaA,
+  DeltaM,
+  SL_Qbar,
+  glm_Qbar = NULL,
+  a_0,
+  stratify,
+  family,
+  verbose = FALSE,
+  return_models = FALSE,
+  valid_rows,
+  all_mediator_values,
+  ...
+)
 }
 \arguments{
 \item{Y}{A vector of continuous or binary outcomes.}

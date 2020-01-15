@@ -4,8 +4,22 @@
 \alias{target_Qbar}
 \title{Function to target the outcome regression}
 \usage{
-target_Qbar(Y, A, M1, M2, a, a_star, all_mediator_values, Qbar_n, gn,
-  Q_M_n, ...)
+target_Qbar(
+  Y,
+  A,
+  M1,
+  M2,
+  a,
+  a_star,
+  all_mediator_values,
+  Qbar_n,
+  gn,
+  Q_M_n,
+  which_effects = c("direct", "indirectM1", "indirectM2"),
+  bound_pred = TRUE,
+  epsilon_threshold = 5,
+  ...
+)
 }
 \arguments{
 \item{Y}{the outcome}

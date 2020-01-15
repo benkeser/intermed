@@ -4,14 +4,38 @@
 \alias{intermed}
 \title{Function to compute TMLE of intervention effects}
 \usage{
-intermed(Y, C, M1, M2, A, DeltaA = as.numeric(!is.na(A)),
-  DeltaM = as.numeric(!is.na(M1)), a = 1, a_star = 0,
-  SL_Qbar = NULL, SL_g = NULL, SL_Q_M = NULL, n_SL = 1,
-  glm_Qbar = NULL, glm_g = NULL, glm_Q_M = NULL, tolg = 0.01,
-  tol = 1/(sqrt(length(Y)) * log(length(Y))), targeted_se = FALSE,
-  return_models = FALSE, cvFolds = 1, parallel = FALSE,
-  use_future = FALSE, Qbar_n = NULL, Q_M_n = NULL, gn = NULL,
-  max_iter = 50, verbose = FALSE, stratify = FALSE, ...)
+intermed(
+  Y,
+  C,
+  M1,
+  M2,
+  A,
+  DeltaA = as.numeric(!is.na(A)),
+  DeltaM = as.numeric(!is.na(M1)),
+  a = 1,
+  a_star = 0,
+  SL_Qbar = NULL,
+  SL_g = NULL,
+  SL_Q_M = NULL,
+  n_SL = 1,
+  glm_Qbar = NULL,
+  glm_g = NULL,
+  glm_Q_M = NULL,
+  tolg = 0.01,
+  tol = 1/(sqrt(length(Y)) * log(length(Y))),
+  targeted_se = FALSE,
+  return_models = FALSE,
+  cvFolds = 1,
+  parallel = FALSE,
+  use_future = FALSE,
+  Qbar_n = NULL,
+  Q_M_n = NULL,
+  gn = NULL,
+  max_iter = 50,
+  verbose = FALSE,
+  stratify = FALSE,
+  ...
+)
 }
 \arguments{
 \item{Y}{outcome}

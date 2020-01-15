@@ -4,8 +4,17 @@
 \alias{reorder_list}
 \title{Helper function to reorder lists according to cvFolds}
 \usage{
-reorder_list(a_list, a_0, valid_rows, n_SL = 1, which_nuisance, n,
-  n_mediator_values, n_M1_values = 0, n_M2_values = 0)
+reorder_list(
+  a_list,
+  a_0,
+  valid_rows,
+  n_SL = 1,
+  which_nuisance,
+  n,
+  n_mediator_values,
+  n_M1_values = 0,
+  n_M2_values = 0
+)
 }
 \arguments{
 \item{a_list}{Structured list of nuisance parameters}
