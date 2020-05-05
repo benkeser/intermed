@@ -141,7 +141,7 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 	                          scaled_offset = scaled_offset)
 	colnames(target_data)[1:num_covariates] <- paste0("H", 1:num_covariates)
 
-	if(bound_pred){
+	if(TRUE){
 		llik <- function(eps, data){
 			p <- plogis(data$scaled_offset + as.matrix(data[,1:num_covariates]) %*% eps)
 			return(-sum(data$scaled_Y * log(p) + (1 - data$scaled_Y) * log(1 - p)))
@@ -689,9 +689,12 @@ target_conditional_direct_effect <- function(Qbarbar, all_mediator_values, gn,
 			stop("nothing here")
 		}
 	}else{
-
 		# target QbarbarM1_star_m2_star_a
-		ell <- min(Qbar_M1M2_a); u <- max(Qbar_M1M2_a)
+		if(!all(Y %in% c(0,1))){
+			ell <- min(Qbar_M1M2_a); u <- max(Qbar_M1M2_a)
+		}else{
+			ell <- 0; u <- 1
+		}
 		scaled_outcome <- (Qbar_M1M2_a - ell)/(u - ell)
 
 		H_A <- as.numeric(A == a_star) / gn[[1]]
@@ -714,7 +717,9 @@ target_conditional_direct_effect <- function(Qbarbar, all_mediator_values, gn,
 	    Qbar_M1M2_a_tmle <- predict(fluc_mod, newdata = pred_data_a, type = "response")*(u - ell) + ell
 
 	 	# target QbarbarM1_star_m2_star_a_star
-		ell <- min(Qbar_M1M2_a_star); u <- max(Qbar_M1M2_a_star)
+		if(!all(Y %in% c(0,1))){
+			ell <- min(Qbar_M1M2_a_star); u <- max(Qbar_M1M2_a_star)
+		}
 		scaled_outcome <- (Qbar_M1M2_a_star - ell)/(u - ell)
 
 		H_A <- as.numeric(A == a_star) / gn[[1]]
@@ -735,7 +740,7 @@ target_conditional_direct_effect <- function(Qbarbar, all_mediator_values, gn,
 		  scaled_offset = SuperLearner::trimLogit(scaled_offset_out)	 
 	    )
 	    Qbar_M1M2_a_star_tmle <- predict(fluc_mod, newdata = pred_data_a, type = "response")*(u - ell) + ell
-	       
+		cond_direct_effect <- Qbar_M1M2_a_tmle - Qbar_M1M2_a_star_tmle 
 	}
 	return(cond_direct_effect)
 }
