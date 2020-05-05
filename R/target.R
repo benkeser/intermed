@@ -15,7 +15,7 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
                         gn,
                         Q_M_n, 
                         which_effects = c("direct", "indirectM1", "indirectM2"), 
-                        bound_pred = TRUE, 
+                        bound_pred = FALSE, 
                         epsilon_threshold = 5, # truncate large epsilon values
                         ...){
 	# if(!all(Y %in% c(0,1)) & bound_pred){
@@ -127,7 +127,7 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 	# try scaling by min and max of initial Qbar
 	if(bound_pred){
 		allQbar <- Reduce(c, lapply(Qbar_n, function(x){unlist(x[[1]], use.names = FALSE)}))
-		ell_scale <- min(allQbar)
+		ell_scale <- 0
 		u_scale <- max(allQbar)
 	}else{
 		ell_scale <- min(Y)
@@ -146,8 +146,18 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 			p <- plogis(data$scaled_offset + as.matrix(data[,1:num_covariates]) %*% eps)
 			return(-sum(data$scaled_Y * log(p) + (1 - data$scaled_Y) * log(1 - p)))
 		}
-		fluc_mod <- optim(par = rep(0, num_covariates), fn = llik, data = target_data)
-		epsilon <- fluc_mod$par
+		# fluc_mod <- optim(par = rep(0, num_covariates), fn = llik, data = target_data)
+		# epsilon <- fluc_mod$par
+		# try doing it one by one
+		epsilon <- NULL
+		for(i in 1:num_covariates){			
+			fluc_modi <- optim(par = rep(0, num_covariates), fn = llik, data = target_data[,c(i,6,7)],
+			                   method = "Brent", lower = -10, upper = 10)
+			epsilon <- c(epsilon, fluc_modi$par)
+			target_data$scaled_offset <- target_data$scaled_offset + epsilon[i] * target_data[,i]
+		}
+
+
 	}else{
 		fluc_mod <- suppressWarnings(glm(as.formula(paste0("scaled_Y ~ offset(scaled_offset) -1 + ",
 		                                                   paste0("H", 1:num_covariates, collapse = "+"))), 
