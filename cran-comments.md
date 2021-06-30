@@ -15,4 +15,4 @@ There were 0 NOTEs.
 Nothing to report.
 
 ## Additional Notes
-Submission of initial package, v 1.0.0
+Submission of initial package, v 0.0.1

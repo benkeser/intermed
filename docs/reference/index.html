@@ -6,23 +6,31 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Function reference • drtmle</title>
+<title>Function reference • intermed</title>
+
 
 <!-- jquery -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 <!-- Bootstrap -->
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha256-916EbMg70RQy9LHiGkXzG8hSg9EdNy97GazNG/aiY1w=" crossorigin="anonymous" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha256-U5ZEeKfGNOja007MMD3YBI0A3OSZOQbeG6z2f2Y0hu8=" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha256-bZLfwXAP04zRMK2BjiO8iu9pf4FbLqX6zitd+tIvLhE=" crossorigin="anonymous" />
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script>
+
+<!-- bootstrap-toc -->
+<link rel="stylesheet" href="../bootstrap-toc.css">
+<script src="../bootstrap-toc.js"></script>
 
 <!-- Font Awesome icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha256-eZrrJcwDc/3uDhsdt61sL2oOBY362qM3lon1gyExkL0=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous" />
 
 <!-- clipboard.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script>
 
-<!-- sticky kit -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-kit/1.1.3/sticky-kit.min.js" integrity="sha256-c4Rlo1ZozqTPE2RLuvbusY3+SU1pQaJC0TjuhygMipw=" crossorigin="anonymous"></script>
+<!-- headroom.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script>
 
 <!-- pkgdown -->
 <link href="../pkgdown.css" rel="stylesheet">
@@ -30,7 +38,9 @@
 
 
 
+
 <meta property="og:title" content="Function reference" />
+
 
 
 
@@ -44,9 +54,10 @@
 <![endif]-->
 
 
+
   </head>
 
-  <body>
+  <body data-spy="scroll" data-target="#toc">
     <div class="container template-reference-index">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -59,8 +70,8 @@
         <span class="icon-bar"></span>
       </button>
       <span class="navbar-brand">
-        <a class="navbar-link" href="../index.html">drtmle</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.0.4.9001</span>
+        <a class="navbar-link" href="../index.html">intermed</a>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.1</span>
       </span>
     </div>
 
@@ -68,34 +79,21 @@
       <ul class="nav navbar-nav">
         <li>
   <a href="../index.html">
-    <span class="fa fa-home fa-lg"></span>
+    <span class="fas fa-home fa-lg"></span>
      
   </a>
 </li>
 <li>
   <a href="../reference/index.html">Reference</a>
 </li>
-<li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-    Articles
-     
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu" role="menu">
-    <li>
-      <a href="../articles/using_drtmle.html">`drtmle`: Doubly-Robust Inference in R</a>
-    </li>
-  </ul>
-</li>
 <li>
   <a href="../news/index.html">Changelog</a>
 </li>
       </ul>
-      
       <ul class="nav navbar-nav navbar-right">
         <li>
-  <a href="https://github.com/benkeser/drtmle">
-    <span class="fa fa-github fa-lg"></span>
+  <a href="https://github.com/benkeser/intermed/">
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -106,6 +104,7 @@
 </div><!--/.navbar -->
 
       
+
       </header>
 
 <div class="row">
@@ -129,20 +128,12 @@
           <p class="section-desc"></p>
         </th>
       </tr>
+      
+      
+    </tbody><tbody>
+      
+      
       <tr>
-        
-        <td>
-          <p><code><a href="SL.npreg.html">SL.npreg()</a></code> </p>
-        </td>
-        <td><p>Super learner wrapper for kernel regression</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="adaptive_iptw.html">adaptive_iptw()</a></code> </p>
-        </td>
-        <td><p>Compute asymptotically linear IPTW estimators with super learning
-for the propensity score</p></td>
-      </tr><tr>
         
         <td>
           <p><code><a href="ci.html">ci()</a></code> </p>
@@ -151,161 +142,137 @@ for the propensity score</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="ci.adaptive_iptw.html">ci(<i>&lt;adaptive_iptw&gt;</i>)</a></code> </p>
+          <p><code><a href="ci.intermed.html">ci(<i>&lt;intermed&gt;</i>)</a></code> </p>
         </td>
-        <td><p>Confidence intervals for adaptive_iptw objects</p></td>
+        <td><p>Confidence intervals for interventional mediation effects</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="ci.drtmle.html">ci(<i>&lt;drtmle&gt;</i>)</a></code> </p>
-        </td>
-        <td><p>Confidence intervals for drtmle objects</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="drtmle.html">drtmle()</a></code> </p>
-        </td>
-        <td><p>TMLE estimate of the average treatment effect with doubly-robust inference</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="estimateG.html">estimateG()</a></code> </p>
+          <p><code><a href="estimate_G.html">estimate_G()</a></code> </p>
         </td>
         <td><p>estimateG</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="estimateQ.html">estimateQ()</a></code> </p>
+          <p><code><a href="estimate_Q_M.html">estimate_Q_M()</a></code> </p>
         </td>
-        <td><p>estimateQ</p></td>
+        <td><p>estimate_Q_M</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="estimateQrn.html">estimateQrn()</a></code> </p>
+          <p><code><a href="estimate_Qbar.html">estimate_Qbar()</a></code> </p>
         </td>
-        <td><p>estimateQrn</p></td>
+        <td><p>estimate_Qbar</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="estimategrn.html">estimategrn()</a></code> </p>
+          <p><code><a href="evaluate_direct_effect.html">evaluate_direct_effect()</a></code> </p>
         </td>
-        <td><p>estimategrn</p></td>
+        <td><p>Helper function to evaluate the direct effect</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="eval_Diptw.html">eval_Diptw()</a></code> </p>
+          <p><code><a href="evaluate_eif_direct.html">evaluate_eif_direct()</a></code> </p>
         </td>
-        <td><p>Evaluate usual influence function of IPTW</p></td>
+        <td><p>Function to evaluate the canonical gradient of 
+the direct effect at a given set of estimated nuisance parameters
+and for each observation.</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="eval_Diptw_g.html">eval_Diptw_g()</a></code> </p>
+          <p><code><a href="evaluate_eif_indirect_M1.html">evaluate_eif_indirect_M1()</a></code> </p>
         </td>
-        <td><p>Evaluate extra piece of the influence function for the IPTW</p></td>
+        <td><p>Function to evaluate the canonical gradient of 
+the indirect effect through M1 at a given set of estimated nuisance parameters
+and for each observation.</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="eval_Dstar.html">eval_Dstar()</a></code> </p>
+          <p><code><a href="evaluate_eif_indirect_M2.html">evaluate_eif_indirect_M2()</a></code> </p>
         </td>
-        <td><p>Evaluate usual efficient influence function</p></td>
+        <td><p>Function to evaluate the canonical gradient of 
+the indirect effect through M2 at a given set of estimated nuisance parameters
+and for each observation.</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="eval_Dstar_Q.html">eval_Dstar_Q()</a></code> </p>
+          <p><code><a href="evaluate_eif_total.html">evaluate_eif_total()</a></code> </p>
         </td>
-        <td><p>Evaluate extra piece of efficient influence function resulting from
-misspecification of propensity score</p></td>
+        <td><p>Function to evaluate the canonical gradient of 
+the total effect at a given set of estimated nuisance parameters
+and for each observation.</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="eval_Dstar_g.html">eval_Dstar_g()</a></code> </p>
+          <p><code><a href="evaluate_total_effect.html">evaluate_total_effect()</a></code> </p>
         </td>
-        <td><p>Evaluate extra piece of efficient influence function resulting from
-misspecification of outcome regression</p></td>
+        <td><p>Helper function to evaluate the total effect</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="extract_models.html">extract_models()</a></code> </p>
+          <p><code><a href="extract_Qbar_obs.html">extract_Qbar_obs()</a></code> </p>
         </td>
-        <td><p>Help function to extract models from fitted object</p></td>
+        <td><p>Helper function for extracting Qbar at the observed values of confounders and
+mediators under <code>a</code> or <code>a_star</code></p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="fluctuateG.html">fluctuateG()</a></code> </p>
+          <p><code><a href="extract_joint.html">extract_joint()</a></code> </p>
         </td>
-        <td><p>fluctuateG</p></td>
+        <td><p>Helper function for extracting joint distributions at particular values of 
+the mediator.</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="fluctuateQ.html">fluctuateQ()</a></code> </p>
+          <p><code><a href="extract_marginal.html">extract_marginal()</a></code> </p>
         </td>
-        <td><p>fluctuateQ</p></td>
+        <td><p>Helper function for extracting marginal distributions at particular values of 
+the mediator.</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="fluctuateQ1.html">fluctuateQ1()</a></code> </p>
+          <p><code><a href="format_long_hazards.html">format_long_hazards()</a></code> </p>
         </td>
-        <td><p>fluctuateQ1</p></td>
+        <td><p>Generate long format hazards data for conditional density estimation</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="fluctuateQ2.html">fluctuateQ2()</a></code> </p>
+          <p><code><a href="get_Qbarbar.html">get_Qbarbar()</a></code> </p>
         </td>
-        <td><p>fluctuateQ2</p></td>
+        <td><p>Helper function to marginalize outcome regression over mediator 
+distributions. Used to get each of the relevant nuisance parameters needed
+to evaluate the total, direct, and indirect effects.</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="make_validRows.html">make_validRows()</a></code> </p>
+          <p><code><a href="intermed.html">intermed()</a></code> </p>
         </td>
-        <td><p>Make list of rows in each validation fold.</p></td>
+        <td><p>AIPTW and TMLE estimates of interventional mediation effects</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="plot.drtmle.html">plot(<i>&lt;drtmle&gt;</i>)</a></code> </p>
+          <p><code><a href="map_hazard_to_density.html">map_hazard_to_density()</a></code> </p>
         </td>
-        <td><p>Plot reduced dimension regression fits</p></td>
+        <td><p>Map a predicted hazard to a predicted density for a single observation</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="predict.SL.npreg.html">predict(<i>&lt;SL.npreg&gt;</i>)</a></code> </p>
+          <p><code><a href="predict_density.html">predict_density()</a></code> </p>
         </td>
-        <td><p>Predict method for SL.npreg</p></td>
+        <td><p>Helper function to predict from a super learner fit on the hazard scale
+to obtain a prediction on the density scale</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="print.adaptive_iptw.html">print(<i>&lt;adaptive_iptw&gt;</i>)</a></code> </p>
+          <p><code><a href="print.intermed.html">print(<i>&lt;intermed&gt;</i>)</a></code> </p>
         </td>
-        <td><p>Print the output of a <code>"adaptive_iptw"</code> object.</p></td>
+        <td><p>Print the AIPTW results</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="print.ci.adaptive_iptw.html">print(<i>&lt;ci.adaptive_iptw&gt;</i>)</a></code> </p>
+          <p><code><a href="reduce_merge.html">reduce_merge()</a></code> </p>
         </td>
-        <td><p>Print the output of ci.adaptive_iptw</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="print.ci.drtmle.html">print(<i>&lt;ci.drtmle&gt;</i>)</a></code> </p>
-        </td>
-        <td><p>Print the output of ci.drtmle</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="print.drtmle.html">print(<i>&lt;drtmle&gt;</i>)</a></code> </p>
-        </td>
-        <td><p>Print the output of a <code>"drtmle"</code> object.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="print.wald_test.adaptive_iptw.html">print(<i>&lt;wald_test.adaptive_iptw&gt;</i>)</a></code> </p>
-        </td>
-        <td><p>Print the output of wald_test.adaptive_iptw</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="print.wald_test.drtmle.html">print(<i>&lt;wald_test.drtmle&gt;</i>)</a></code> </p>
-        </td>
-        <td><p>Print the output of wald_test.drtmle</p></td>
+        <td><p>Helper to merge covariates in targeting</p></td>
       </tr><tr>
         
         <td>
@@ -315,51 +282,69 @@ misspecification of outcome regression</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="tmp_method.CC_LS.html">tmp_method.CC_LS()</a></code> </p>
+          <p><code><a href="target_Qbar.html">target_Qbar()</a></code> </p>
         </td>
-        <td><p>Temporary fix for convex combination method mean squared error
-Relative to existing implementation, we reduce the tolerance at which 
-we declare predictions from a given algorithm the same as another</p></td>
+        <td><p>Target the outcome regression</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="tmp_method.CC_nloglik.html">tmp_method.CC_nloglik()</a></code> </p>
+          <p><code><a href="target_Qbarbar.html">target_Qbarbar()</a></code> </p>
         </td>
-        <td><p>Temporary fix for convex combination method negative log-likelihood loss
-Relative to existing implementation, we reduce the tolerance at which 
-we declare predictions from a given algorithm the same as another.
-Note that because of the way <code>SuperLearner</code> is structure, one needs to 
-install the optimization software separately.</p></td>
+        <td><p>Target the iterated regressions</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="wald_test.html">wald_test()</a></code> </p>
+          <p><code><a href="target_Qbarbar_M1_star_times_M2_star_a.html">target_Qbarbar_M1_star_times_M2_star_a()</a></code> </p>
         </td>
-        <td><p>Wald tests for drtmle and adaptive_iptw objects</p></td>
+        <td><p>Function for targeting Qbarbar_M1_star_times_M2_star_a</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="wald_test.adaptive_iptw.html">wald_test(<i>&lt;adaptive_iptw&gt;</i>)</a></code> </p>
+          <p><code><a href="target_Qbarbar_M1_times_M2_a.html">target_Qbarbar_M1_times_M2_a()</a></code> </p>
         </td>
-        <td><p>Wald tests for adaptive_iptw objects</p></td>
+        <td><p>Function for targeting Qbarbar_M1_times_M2_a</p></td>
       </tr><tr>
         
         <td>
-          <p><code><a href="wald_test.drtmle.html">wald_test(<i>&lt;drtmle&gt;</i>)</a></code> </p>
+          <p><code><a href="target_Qbarbar_M1_times_M2_star_a.html">target_Qbarbar_M1_times_M2_star_a()</a></code> </p>
         </td>
-        <td><p>Wald tests for drtmle objects</p></td>
+        <td><p>Function for targeting Qbarbar_M1_times_M2_star_a</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="target_conditional_direct_effect.html">target_conditional_direct_effect()</a></code> </p>
+        </td>
+        <td><p>The naming convention is a bit different here, because we're actually
+able to go after the conditional direct effect, well, directly. That is, 
+we can define a loss function whose minimizer defines the conditional mean of the
+difference between Qbar_a
+and Qbar_a_star with respect to the joint distribution of M1 and M2 given C and A = a_star. 
+We can then define a submodel through this conditional mean difference (which is 
+exactly the conditional direct effect) and target this quantity directly.</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="target_conditional_total_effect.html">target_conditional_total_effect()</a></code> </p>
+        </td>
+        <td><p>The naming convention is a bit different here, because we're actually
+able to go after the conditional total effect directly. That is, 
+we can define a loss function whose minimizer defines the conditional mean of the
+difference between Qbar_a
+and Qbar_a_star with respect to the joint distribution of M1 and M2 given C and A.
+We can then define a submodel through this conditional mean difference (which is 
+exactly the conditional total effect) and target this quantity directly.</p></td>
       </tr>
     </tbody>
     </table>
   </div>
 
-  <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
-    <h2>Contents</h2>
-    <ul class="nav nav-pills nav-stacked">
-      <li><a href="#section-all-functions">All functions</a></li>
-    </ul>
+  <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
+    <nav id="toc" data-toggle="toc" class="sticky-top">
+      <h2 data-toc-skip>Contents</h2>
+    </nav>
   </div>
 </div>
+
 
       <footer>
       <div class="copyright">
@@ -367,13 +352,16 @@ install the optimization software separately.</p></td>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.3.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
+
       </footer>
    </div>
 
   
 
+
   </body>
 </html>
+
 

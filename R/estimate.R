@@ -917,3 +917,417 @@ get_M1_M2_a <- function(Qbar_n_i, Q_M_n_i, all_mediator_values, ...){
   out <- sum(Qbar_n_i$Qbar_a_0[[2]] * Q_M_n_i[[2]][[1]])
   return(out)
 }
+
+
+
+#' estimateG
+#'
+#' Function to estimate propensity score
+#'
+#' @param A A vector of binary treatment assignment (assumed to be equal to 0 or
+#'  1)
+#' @param DeltaY Indicator of missing outcome (assumed to be equal to 0 if
+#'  missing 1 if observed)
+#' @param DeltaA Indicator of missing treatment (assumed to be equal to 0 if
+#'  missing 1 if observed)
+#' @param W A \code{data.frame} of named covariates
+#' @param stratify A \code{boolean} indicating whether to estimate the missing
+#'  outcome regression separately for observations with \code{A} equal to 0/1
+#'  (if \code{TRUE}) or to pool across \code{A} (if \code{FALSE}).
+#' @param SL_g A vector of characters describing the super learner library to be
+#'  used for each of the regression (\code{DeltaA}, \code{A}, and
+#'  \code{DeltaY}). To use the same regression for each of the regressions (or
+#'  if there is no missing data in \code{A} nor \code{Y}), a single library may
+#'  be input.
+#' @param tolg A numeric indicating the minimum value for estimates of the
+#'  propensity score.
+#' @param verbose A boolean indicating whether to print status updates.
+#' @param returnModels A boolean indicating whether to return model fits for the
+#'  outcome regression, propensity score, and reduced-dimension regressions.
+#' @param glm_g A character describing a formula to be used in the call to
+#'  \code{glm} for the propensity score.
+#' @param a_0 A vector of fixed treatment values at which to return marginal
+#'  mean estimates.
+#' @param validRows A \code{list} of length \code{cvFolds} containing the row
+#'  indexes of observations to include in validation fold.
+#' @param Qn A \code{list} of estimates of the outcome regression for each value
+#'  in \code{a_0}. Only needed if \code{adapt_g = TRUE}. 
+#' @param adapt_g A boolean indicating whether propensity score is adaptive
+#'  to outcome regression. 
+#' @importFrom SuperLearner SuperLearner trimLogit All
+#' @importFrom stats predict glm as.formula
+
+estimate_G <- function (A, W, DeltaY, DeltaA, SL_g, glm_g, a_0, tolg, stratify = FALSE, 
+    validRows = NULL, verbose = FALSE, returnModels = FALSE, 
+    Qn = NULL, adapt_g = FALSE) 
+{
+    if (is.null(SL_g) & is.null(glm_g)) {
+        stop("Specify Super Learner library or GLM formula for g")
+    }
+    if (!is.null(SL_g) & !is.null(glm_g)) {
+        warning(paste0("Super Learner library and GLM formula specified.", 
+            "Proceeding with Super Learner only."))
+        glm_g <- NULL
+    }
+    if (length(validRows) != length(A)) {
+        trainDeltaA <- DeltaA[-validRows]
+        trainDeltaY <- DeltaY[-validRows]
+        trainA <- A[-validRows]
+        if (!adapt_g) {
+            trainW <- W[-validRows, , drop = FALSE]
+            validW <- W[validRows, , drop = FALSE]
+        }
+        else {
+            allW <- data.frame(Reduce(cbind, Qn))
+            trainW <- allW[-validRows, , drop = FALSE]
+            validW <- allW[validRows, , drop = FALSE]
+            colnames(trainW) <- paste0("Q", a_0, "W")
+            colnames(validW) <- paste0("Q", a_0, "W")
+        }
+        validA <- A[validRows]
+        validDeltaA <- DeltaA[validRows]
+        validDeltaY <- DeltaY[validRows]
+    }
+    else {
+        trainA <- validA <- A
+        if (!adapt_g) {
+            trainW <- validW <- W
+        }
+        else {
+            trainW <- validW <- data.frame(Reduce(cbind, Qn))
+            colnames(trainW) <- paste0("Q", a_0, "W")
+            colnames(validW) <- paste0("Q", a_0, "W")
+        }
+        trainDeltaA <- validDeltaA <- DeltaA
+        trainDeltaY <- validDeltaY <- DeltaY
+    }
+    if (!is.null(SL_g)) {
+        namedSL_g <- c("DeltaA", "A", "DeltaY") %in% names(SL_g)
+        if (!any(namedSL_g)) {
+            SL_g <- list(DeltaA = SL_g, A = SL_g, DeltaY = SL_g)
+        }
+    }
+    else if (!is.null(glm_g)) {
+        namedglm_g <- c("DeltaA", "A", "DeltaY") %in% names(glm_g)
+        if (!any(namedglm_g)) {
+            glm_g <- list(DeltaA = glm_g, A = glm_g, DeltaY = glm_g)
+        }
+    }
+    if (!all(DeltaA == 1)) {
+        if (!is.null(SL_g)) {
+            if (length(SL_g$DeltaA) > 1 | is.list(SL_g$DeltaA)) {
+                fm_DeltaA <- SuperLearner::SuperLearner(Y = trainDeltaA, 
+                  X = trainW, newX = validW, family = stats::binomial(), 
+                  SL.library = SL_g$DeltaA, verbose = verbose, 
+                  method = tmp_method.CC_nloglik())
+                gn_DeltaA <- fm_DeltaA$SL.predict
+            }
+            else if (!is.list(SL_g$DeltaA) & length(SL_g$DeltaA) == 
+                1) {
+                fm_DeltaA <- do.call(SL_g$DeltaA, args = list(Y = trainDeltaA, 
+                  X = trainW, newX = validW, obsWeights = rep(1, 
+                    length(trainA)), family = stats::binomial()))
+                gn_DeltaA <- fm_DeltaA$pred
+            }
+        }
+        if (!is.null(glm_g)) {
+            thisDat <- data.frame(DeltaA = trainDeltaA, trainW)
+            fm_DeltaA <- stats::glm(stats::as.formula(paste0("DeltaA~", 
+                glm_g$DeltaA)), data = thisDat, family = stats::binomial())
+            gn_DeltaA <- stats::predict(fm_DeltaA, type = "response", 
+                newdata = data.frame(DeltaA = validDeltaA, validW))
+        }
+        name_DeltaA <- "DeltaA ~ W"
+    }
+    else {
+        fm_DeltaA <- NULL
+        name_DeltaA <- ""
+        gn_DeltaA <- rep(1, length(validDeltaA))
+    }
+    if (!is.null(SL_g)) {
+        if (length(SL_g$A) > 1 | is.list(SL_g$A)) {
+            if (length(a_0) == length(unique(A)) & length(unique(A[!is.na(A)])) == 
+                2) {
+                fm_A <- list(SuperLearner::SuperLearner(Y = as.numeric(trainA[trainDeltaA == 
+                  1] == a_0[1]), X = trainW[trainDeltaA == 1, 
+                  , drop = FALSE], newX = validW, family = stats::binomial(), 
+                  SL.library = SL_g$A, verbose = verbose, method = tmp_method.CC_nloglik()))
+                gn_A <- vector(mode = "list", length = 2)
+                gn_A[[1]] <- fm_A[[1]]$SL.predict
+                gn_A[[2]] <- 1 - gn_A[[1]]
+                name_A <- paste0("I(A = ", a_0[1], ") ~ W | DeltaA == 1")
+            }
+            else {
+                a_ct <- 0
+                gn_A <- vector(mode = "list", length = length(a_0))
+                fm_A <- vector(mode = "list", length = length(a_0) - 
+                  1)
+                name_A <- rep(NA, length(a_0) - 1)
+                for (a in a_0[1:(length(a_0) - 1)]) {
+                  if (a_ct == 0) {
+                    include <- rep(TRUE, length(trainA))
+                  }
+                  else {
+                    include <- !(trainA %in% a_0[1:a_ct])
+                  }
+                  include[trainDeltaA == 0] <- FALSE
+                  tmp_fm <- SuperLearner::SuperLearner(Y = as.numeric(trainA[include] == 
+                    a), X = trainW[include, , drop = FALSE], 
+                    newX = validW, family = stats::binomial(), 
+                    SL.library = SL_g$A, verbose = verbose, method = tmp_method.CC_nloglik())
+                  tmp_pred <- tmp_fm$SL.pred
+                  if (a_ct != 0) {
+                    gn_A[[a_ct + 1]] <- tmp_pred * Reduce("*", 
+                      lapply(gn_A[1:a_ct], function(x) {
+                        1 - x
+                      }))
+                  }
+                  else {
+                    gn_A[[a_ct + 1]] <- tmp_pred
+                  }
+                  fm_A[[a_ct + 1]] <- tmp_fm
+                  name_A[a_ct + 1] <- paste0("I(A = ", a, ") ~ W | DeltaA == 1")
+                  a_ct <- a_ct + 1
+                }
+                gn_A[[a_ct + 1]] <- 1 - Reduce("+", gn_A[1:a_ct])
+            }
+        }
+        else if (!is.list(SL_g$A) & length(SL_g$A) == 1) {
+            if (length(a_0) == length(unique(A[!is.na(A)])) & 
+                length(unique(A[!is.na(A)])) == 2) {
+                gn_A <- vector(mode = "list", length = 2)
+                fm_A <- list(do.call(SL_g$A, args = list(Y = as.numeric(trainA[trainDeltaA == 
+                  1] == a_0[1]), X = trainW[trainDeltaA == 1, 
+                  , drop = FALSE], newX = validW, obsWeights = rep(1, 
+                  length(trainA[trainDeltaA == 1])), family = stats::binomial())))
+                gn_A[[1]] <- fm_A[[1]]$pred
+                gn_A[[2]] <- 1 - fm_A[[1]]$pred
+                name_A <- paste0("I(A = ", a_0[1], ") ~ W | DeltaA == 1")
+            }
+            else {
+                a_ct <- 0
+                gn_A <- vector(mode = "list", length = length(a_0))
+                fm_A <- vector(mode = "list", length = length(a_0) - 
+                  1)
+                name_A <- rep(NA, length(a_0) - 1)
+                for (a in a_0[1:(length(a_0) - 1)]) {
+                  if (a_ct == 0) {
+                    include <- rep(TRUE, length(trainA))
+                  }
+                  else {
+                    include <- !(trainA %in% a_0[1:a_ct])
+                  }
+                  include[trainDeltaA == 0] <- FALSE
+                  tmp_fm <- do.call(SL_g$A, args = list(Y = as.numeric(trainA[include] == 
+                    a), X = trainW[include, , drop = FALSE], 
+                    newX = validW, obsWeights = rep(1, length(trainA[include])), 
+                    family = stats::binomial()))
+                  tmp_pred <- tmp_fm$pred
+                  if (a_ct != 0) {
+                    gn_A[[a_ct + 1]] <- tmp_pred * Reduce("*", 
+                      lapply(gn_A[1:a_ct], function(x) {
+                        1 - x
+                      }))
+                  }
+                  else {
+                    gn_A[[a_ct + 1]] <- tmp_pred
+                  }
+                  fm_A[[a_ct + 1]] <- tmp_fm
+                  name_A[a_ct + 1] <- paste0("I(A = ", a, ") ~ W | DeltaA == 1")
+                  a_ct <- a_ct + 1
+                }
+                gn_A[[a_ct + 1]] <- 1 - Reduce("+", gn_A[1:a_ct])
+            }
+        }
+    }
+    if (!is.null(glm_g)) {
+        if (length(a_0) == length(unique(A)) & length(unique(A[!is.na(A)])) == 
+            2) {
+            thisDat <- data.frame(A = as.numeric(trainA[trainDeltaA == 
+                1] == a_0[1]), trainW[trainDeltaA == 1, , drop = FALSE])
+            fm_A <- list(stats::glm(stats::as.formula(paste0("A~", 
+                glm_g$A)), data = thisDat, family = stats::binomial()))
+            gn_A <- vector(mode = "list", length = 2)
+            name_A <- paste0("I(A = ", a_0[1], ") ~ W | DeltaA == 1")
+            gn_A[[1]] <- stats::predict(fm_A[[1]], newdata = data.frame(A = validA, 
+                validW), type = "response")
+            gn_A[[2]] <- 1 - gn_A[[1]]
+        }
+        else {
+            a_ct <- 0
+            gn_A <- vector(mode = "list", length = length(a_0))
+            fm_A <- vector(mode = "list", length = length(a_0) - 
+                1)
+            name_A <- rep(NA, length(a_0) - 1)
+            for (a in a_0[1:(length(a_0) - 1)]) {
+                if (a_ct == 0) {
+                  include <- rep(TRUE, length(A))
+                }
+                else {
+                  include <- !(A %in% a_0[1:a_ct])
+                }
+                include[trainDeltaA == 0] <- FALSE
+                thisDat <- data.frame(as.numeric(trainA[include] == 
+                  a), trainW[include, , drop = FALSE])
+                colnames(thisDat) <- c("A", colnames(W))
+                tmp_fm <- stats::glm(stats::as.formula(paste0("A~", 
+                  glm_g)), data = thisDat, family = stats::binomial())
+                tmp_pred <- stats::predict(tmp_fm, newdata = data.frame(A = validA, 
+                  validW), type = "response")
+                if (a_ct != 0) {
+                  gn_A[[a_ct + 1]] <- tmp_pred * Reduce("*", 
+                    lapply(gn_A[1:a_ct], function(x) {
+                      1 - x
+                    }))
+                }
+                else {
+                  gn_A[[a_ct + 1]] <- tmp_pred
+                }
+                fm_A[[a_ct + 1]] <- tmp_fm
+                name_A[a_ct + 1] <- paste0("I(A = ", a, ") ~ W | DeltaA == 1")
+                a_ct <- a_ct + 1
+            }
+            gn_A[[a_ct + 1]] <- 1 - Reduce("+", gn_A[1:a_ct])
+        }
+    }
+    if (!all(DeltaY == 1)) {
+        include <- (trainDeltaA == 1)
+        if (!is.null(SL_g)) {
+            if (length(SL_g$DeltaY) > 1 | is.list(SL_g$DeltaY)) {
+                if (stratify) {
+                  fm_DeltaY <- vector(mode = "list", length = length(a_0))
+                  gn_DeltaY <- vector(mode = "list", length = length(a_0))
+                  name_DeltaY <- rep(NA, length(a_0))
+                  a_ct <- 0
+                  for (a in a_0) {
+                    a_ct <- a_ct + 1
+                    include2 <- (trainA == a)
+                    include2[is.na(include2)] <- FALSE
+                    fm_DeltaY[[a_ct]] <- SuperLearner::SuperLearner(Y = trainDeltaY[include & 
+                      include2], X = trainW[include & include2, 
+                      , drop = FALSE], newX = validW, family = stats::binomial(), 
+                      SL.library = SL_g$DeltaY, verbose = verbose, 
+                      method = tmp_method.CC_nloglik())
+                    name_DeltaY[a_ct] <- paste0("DeltaY ~ W | DeltaA == 1", 
+                      " & A == ", a)
+                    gn_DeltaY[[a_ct]] <- fm_DeltaY[[a_ct]]$SL.predict
+                  }
+                }
+                else {
+                  fm_DeltaY <- list(SuperLearner::SuperLearner(Y = trainDeltaY[include], 
+                    X = data.frame(A = trainA[include], trainW[include, 
+                      , drop = FALSE]), family = stats::binomial(), 
+                    SL.library = SL_g$DeltaY, verbose = verbose, 
+                    method = tmp_method.CC_nloglik()))
+                  gn_DeltaY <- vector(mode = "list", length = length(a_0))
+                  name_DeltaY <- paste0("DeltaY ~ W + A | DeltaA == 1")
+                  a_ct <- 0
+                  for (a in a_0) {
+                    a_ct <- a_ct + 1
+                    gn_DeltaY[[a_ct]] <- stats::predict(fm_DeltaY[[1]], 
+                      onlySL = TRUE, newdata = data.frame(A = a, 
+                        validW))$pred
+                  }
+                }
+            }
+            else if (!is.list(SL_g$DeltaY) & length(SL_g$DeltaY) == 
+                1) {
+                if (stratify) {
+                  fm_DeltaY <- vector(mode = "list", length = length(a_0))
+                  gn_DeltaY <- vector(mode = "list", length = length(a_0))
+                  name_DeltaY <- rep(NA, length(a_0))
+                  a_ct <- 0
+                  for (a in a_0) {
+                    a_ct <- a_ct + 1
+                    include2 <- (trainA == a)
+                    include2[is.na(include2)] <- FALSE
+                    fm_DeltaY[[a_ct]] <- do.call(SL_g$DeltaY, 
+                      args = list(Y = trainDeltaY[include & include2], 
+                        X = trainW[include & include2, , drop = FALSE], 
+                        newX = validW, obsWeights = rep(1, length(trainA[include & 
+                          include2])), family = stats::binomial()))
+                    name_DeltaY[a_ct] <- paste0("DeltaY ~ W | DeltaA == 1", 
+                      " & A == ", a)
+                    gn_DeltaY[[a_ct]] <- fm_DeltaY[[a_ct]]$pred
+                  }
+                }
+                else {
+                  fm_DeltaY <- list(do.call(SL_g$DeltaY, args = list(Y = trainDeltaY[include], 
+                    X = data.frame(A = trainA[include], trainW[include, 
+                      , drop = FALSE]), newX = data.frame(A = validA, 
+                      validW), obsWeights = rep(1, length(trainA[include])), 
+                    family = stats::binomial())))
+                  name_DeltaY <- paste0("DeltaY ~ W + A | DeltaA == 1")
+                  gn_DeltaY <- vector(mode = "list", length = length(a_0))
+                  a_ct <- 0
+                  for (a in a_0) {
+                    a_ct <- a_ct + 1
+                    gn_DeltaY[[a_ct]] <- stats::predict(fm_DeltaY[[1]]$fit, 
+                      newdata = data.frame(A = a, validW))
+                  }
+                }
+            }
+        }
+        if (!is.null(glm_g)) {
+            if (stratify) {
+                fm_DeltaY <- vector(mode = "list", length = length(a_0))
+                gn_DeltaY <- vector(mode = "list", length = length(a_0))
+                name_DeltaY <- rep(NA, length = length(a_0))
+                a_ct <- 0
+                for (a in a_0) {
+                  a_ct <- a_ct + 1
+                  include2 <- (trainA == a)
+                  include2[is.na(include2)] <- FALSE
+                  fm_DeltaY[[a_ct]] <- stats::glm(stats::as.formula(paste0("trainDeltaY[include & include2]~", 
+                    glm_g$DeltaY)), data = data.frame(trainW[include & 
+                    include2, , drop = FALSE]), family = stats::binomial())
+                  name_DeltaY[a_ct] <- paste0("DeltaY ~ W | DeltaA == 1 ", 
+                    "& A == ", a)
+                  gn_DeltaY[[a_ct]] <- stats::predict(fm_DeltaY[[a_ct]], 
+                    newdata = validW, type = "response")
+                }
+            }
+            else {
+                fm_DeltaY <- list(stats::glm(stats::as.formula(paste0("trainDeltaY[include]~", 
+                  glm_g$DeltaY)), data = data.frame(A = trainA[include], 
+                  trainW[include, , drop = FALSE]), family = stats::binomial()))
+                name_DeltaY <- paste0("DeltaY ~ W + A | DeltaA == 1")
+                gn_DeltaY <- vector(mode = "list", length = length(a_0))
+                a_ct <- 0
+                for (a in a_0) {
+                  a_ct <- a_ct + 1
+                  gn_DeltaY[[a_ct]] <- stats::predict(fm_DeltaY[[1]], 
+                    newdata = data.frame(A = a, validW), type = "response")
+                }
+            }
+        }
+    }
+    else {
+        fm_DeltaY <- NULL
+        name_DeltaY <- ""
+        gn_DeltaY <- vector(mode = "list", length = length(a_0))
+        for (i in 1:length(a_0)) {
+            gn_DeltaY[[i]] <- rep(1, length(validDeltaY))
+        }
+    }
+    gn <- mapply(gn_A = gn_A, gn_DeltaY = gn_DeltaY, FUN = function(gn_A, 
+        gn_DeltaY) {
+        gn_A * gn_DeltaY * gn_DeltaA
+    }, SIMPLIFY = FALSE)
+    gn <- lapply(gn, function(g) {
+        g[g < tolg] <- tolg
+        g
+    })
+    out <- list(est = gn, fm = NULL)
+    if (returnModels) {
+        names(fm_A) <- name_A
+        if (!is.null(fm_DeltaA)) {
+            names(fm_DeltaA) <- name_DeltaA
+        }
+        if (!is.null(fm_DeltaY)) {
+            names(fm_DeltaY) <- name_DeltaY
+        }
+        out$fm <- list(DeltaA = fm_DeltaA, A = fm_A, DeltaY = fm_DeltaY)
+    }
+    return(out)
+}

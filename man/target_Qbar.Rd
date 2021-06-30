@@ -2,7 +2,7 @@
 % Please edit documentation in R/target.R
 \name{target_Qbar}
 \alias{target_Qbar}
-\title{Function to target the outcome regression}
+\title{Target the outcome regression}
 \usage{
 target_Qbar(
   Y,
@@ -16,25 +16,52 @@ target_Qbar(
   gn,
   Q_M_n,
   which_effects = c("direct", "indirectM1", "indirectM2"),
-  bound_pred = TRUE,
+  bound_pred = FALSE,
   epsilon_threshold = 5,
   ...
 )
 }
 \arguments{
-\item{Y}{the outcome}
+\item{Y}{A vector of continuous or binary outcomes.}
 
-\item{A}{the observed treatment}
+\item{A}{A vector of binary treatment assignment (assumed to be equal to 0 or
+1).}
 
-\item{Qbar_n}{The n-length list created as a result of the outcome
-regression estimation routine}
+\item{M1}{A \code{vector} of mediators.}
 
-\item{gn}{The 2-length list created as a result of the propensity 
-score estimation routine}
+\item{M2}{A \code{vector} of mediators.}
 
-\item{Q_M_n}{The n-length list created as a result of the mediator
-distribution estimation routine}
+\item{a}{The label for the treatment. The effects estimates returned pertain
+to estimation of interventional effects of \code{a} versus \code{a_star}.}
+
+\item{a_star}{The label for the treatment. The effects estimates returned pertain
+to estimation of interventional effects of \code{a} versus \code{a_star}.}
+
+\item{all_mediator_values}{Grid of all combinations of M1 and M2}
+
+\item{Qbar_n}{Power users may wish to pass in their own properly formatted list of the
+outcome regression so that
+nuisance parameters can be fitted outside of \code{intermed}.}
+
+\item{gn}{Power users may wish to pass in their own properly formatted list of the
+propensity score so that
+nuisance parameters can be fitted outside of \code{intermed}.}
+
+\item{Q_M_n}{Power users may wish to pass in their own properly formatted list of the
+mediator distributions so that nuisance parameters can be fitted outside 
+of \code{intermed}.}
+
+\item{which_effects}{Which effects to include in the targeted of the outcome regression}
+
+\item{bound_pred}{Should predictions be bounded?}
+
+\item{epsilon_threshold}{To avoid extreme values of fluctuation parameters (indicating 
+likely numerical instability), we truncate the value this parameter can take.}
+}
+\value{
+A list containing all outcome regression evaluations needed
+for downstream calculations.
 }
 \description{
-Function to target the outcome regression
+Target the outcome regression
 }

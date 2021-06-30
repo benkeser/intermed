@@ -18,25 +18,32 @@ target_Qbarbar_M1_times_M2_star_a(
 )
 }
 \arguments{
-\item{Qbarbar}{List of marginalized parameters}
+\item{Qbarbar}{Iterated mean estimates}
 
-\item{Y}{The outcome}
+\item{Y}{A vector of continuous or binary outcomes.}
 
-\item{A}{The treatment}
+\item{A}{A vector of binary treatment assignment (assumed to be equal to 0 or
+1).}
 
-\item{a}{The comparison value of treatment}
+\item{a}{The label for the treatment. The effects estimates returned pertain
+to estimation of interventional effects of \code{a} versus \code{a_star}.}
 
-\item{a_star}{The referent value of treatment}
+\item{a_star}{The label for the treatment. The effects estimates returned pertain
+to estimation of interventional effects of \code{a} versus \code{a_star}.}
 
-\item{tol}{Tolerance for iterative TMLE}
+\item{gn}{Power users may wish to pass in their own properly formatted list of the
+propensity score so that
+nuisance parameters can be fitted outside of \code{intermed}.}
 
-\item{iterative}{Should iterative implementation be used?}
+\item{tol}{The tolerance for stopping the iterative targeting procedure.}
+
+\item{max_iter}{The maximum number of iterations for the TMLE}
 }
 \description{
 There are two interesting features of this 
 targeting problem. First, we see that the nuisance parameter Qbarbar_M1_times_M2_star_a
 can be viewed in two ways: (1) the conditional mean of Qbarbar_M1_a given C with respect
-to the marginal of M_2 given A = a^\star, C; (2) the conditional mean of Qbarbar_M2_star_a given C 
+to the marginal of M_2 given A = a_star, C; (2) the conditional mean of Qbarbar_M2_star_a given C 
 with respect to the marginal of M_1 given A = a, C. The natural inclination then 
 is to use a sum loss function. It seems that we're able to do that here.
 However, to generate the proper score, we would need to 

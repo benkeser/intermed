@@ -12,8 +12,7 @@ of failure in a given bin (under a given partitioning of the support) for a
 single observational unit based on a long format data structure (as produced
 by \code{\link{format_long_hazards}}). This is simply the probability that
 the observed value falls in a corresponding bin, given that it has not yet
-failed (fallen in a previous bin), as given in
-\insertRef{diaz2011super}{haldensify}.}
+failed (fallen in a previous bin).}
 }
 \description{
 For a single observation, map a predicted hazard of failure (occurrence in a

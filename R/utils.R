@@ -23,7 +23,6 @@
 #' @importFrom data.table as.data.table setnames
 #' @importFrom ggplot2 cut_interval cut_number
 #' @importFrom future.apply future_lapply
-#' @importFrom assertthat assert_that
 #
 format_long_hazards <- function(A, W, wts = rep(1, length(A)),
                                 type = c(
@@ -141,10 +140,8 @@ format_long_hazards <- function(A, W, wts = rep(1, length(A)),
 #'  single observational unit based on a long format data structure (as produced
 #'  by \code{\link{format_long_hazards}}). This is simply the probability that
 #'  the observed value falls in a corresponding bin, given that it has not yet
-#'  failed (fallen in a previous bin), as given in
-#'  \insertRef{diaz2011super}{haldensify}.
+#'  failed (fallen in a previous bin).
 #'
-#' @importFrom assertthat assert_that
 #
 map_hazard_to_density <- function(hazard_pred_single_obs) {
   # number of records for the given observation
@@ -158,10 +155,6 @@ map_hazard_to_density <- function(hazard_pred_single_obs) {
   } else {
     hazard_predicted <- hazard_pred_single_obs
   }
-
-  # sanity check of dimensions
-  # assertthat::assert_that(all(dim(hazard_pred_single_obs) ==
-  #   dim(hazard_predicted)))
 
   # multiply hazards across rows to construct the individual-level density
   density_pred_from_hazards <- prod(hazard_predicted)

@@ -9,23 +9,23 @@ Authors@R: c(
 Description: Nonparametric estimators of interventional mediation effects with
     two mediators. 
 Depends:
-    R (>= 3.2.0)
+    R (>= 3.6.0)
 Imports:
     SuperLearner,
     future,
-    doFuture,
     future.apply,
-    future.batchtools
+    data.table,
+    ggplot2
 Suggests:
     testthat,
     knitr,
     rmarkdown,
     quadprog,
-    nloptr,
+    nloptr
 License: MIT + file LICENSE
 URL: https://github.com/benkeser/intermed
 BugReports: https://github.com/benkeser/intermed/issues
 Encoding: UTF-8
 LazyData: true
 VignetteBuilder: knitr
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.1

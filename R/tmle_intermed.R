@@ -1,48 +1,85 @@
-#' Function to compute TMLE of intervention effects
+#' AIPTW and TMLE estimates of interventional mediation effects
 #' 
-#' @param Y outcome
-#' @param C confounders
-#' @param M1 first mediator
-#' @param M2 second mediator
-#' @param A treatment
-#' @param a value of A of interest
-#' @param a_star other value of A of interest
-#' @param glm_Q_M A list with named element \code{M1} and \code{M2} describing the right-hand side
-#' of a GLM formula for, respectively, the conditional hazard of M1 given A (if stratify = FALSE),
-#' C, and M2 and the conditional hazard of M2 given A (if stratify = FALSE) and C. The formula's 
-#' can additionally include a variable named \code{bin_id}, which corresponds to the numeric bin number
-#' (i.e., this controls the level of smoothing over the range of \code{M1} and \code{M2}). 
+#' This function computes multiply robust estimates of interventional mediation
+#' effects with two mediators. Two such estimates are produced, an augmented
+#' inverse probability of treatment weighted (AIPTW) estimator and a targeted minimum loss
+#' estimator (TMLE). The AIPTW was found to perform better in most simulations.
+#' 
+#' Under the hood, the function fits several nuisance regressions and combines them
+#' into the final estimate. Users have several options for fitting these regressions
+#' as described below. In particular, \code{SuperLearner} can be used to flexibly 
+#' estimate the regressions.
+#' 
+#' @param Y A vector of continuous or binary outcomes.
+#' @param A A vector of binary treatment assignment (assumed to be equal to 0 or
+#'  1).
+#' @param C A \code{data.frame} of named covariates.
+#' @param M1 A \code{vector} of mediators.
+#' @param M2 A \code{vector} of mediators.
+#' @param all_mediator_values All combinations of M1 and M2
+#' @param DeltaM Indicator of missing outcome (assumed to be equal to 0 if
+#'  missing 1 if observed).
+#' @param DeltaA Indicator of missing treatment (assumed to be equal to 0 if
+#'  missing 1 if observed).
+#' @param SL_Qbar A vector of characters or a list describing the Super Learner
+#'  library to be used for the outcome regression.
+#' @param SL_g A vector of characters or a list describing the Super Learner
+#'  library to be used for the propensity score.
+#' @param SL_Q_M A list with two named entries \code{M1} and \code{M2}, specifying
+#'  super learner libraries for estimation of the pooled hazard regression that is
+#'  mapped into an estimate of the mediator distributions.
+#' @param a The label for the treatment. The effects estimates returned pertain
+#' to estimation of interventional effects of \code{a} versus \code{a_star}.
+#' @param a_star The label for the treatment. The effects estimates returned pertain
+#' to estimation of interventional effects of \code{a} versus \code{a_star}.
+#' @param n_SL The number of repeated super learner runs to execute for each
+#' regression.
+#' @param glm_Qbar A character describing a formula to be used in the call to
+#'  \code{glm} for the outcome regression. The formula may include \code{colnames(C)},
+#' \code{"A"} (if \code{stratify = FALSE}), \code{"M1"}, and \code{"M2"} as terms in 
+#' the formula.
+#' @param glm_g A character describing a formula to be used in the call to
+#'  \code{glm} for the outcome regression. The formula may include \code{colnames(C)},
+#'  in the formula.
+#' @param glm_Q_M A list with two named entries \code{M1} and \code{M2}, specifying
+#'  the regression formula for estimation of the pooled hazard regression that is
+#'  mapped into an estimate of the mediator distributions. The formula for \code{M1}
+#'  can include \code{"A"} (if \code{stratify = FALSE}) and \code{colnames(C)}, 
+#' while the formula for \code{M2} can additionally include \code{M1}.
+#' @param tolg The truncation level for the propensity score
+#' @param tol The tolerance for stopping the iterative targeting procedure.
+#' @param targeted_se A boolean indicating whether to return the standard error estimates
+#' based on targeted nuisance parameters or the initial estimates of nuisance parameters.
+#' @param return_models A boolean indicating whether to return the fitted models for 
+#' each of the nuisance regressions. If \code{TRUE} then the output will include a list 
+#' with named entries \code{g} (propensity score fit), \code{Qbar} (outcome regression fit),
+#' and \code{Q_M} (mediator distribution fits).
+#' @param Qbar_n Power users may wish to pass in their own properly formatted list of the
+#' outcome regression so that
+#' nuisance parameters can be fitted outside of \code{intermed}.
+#' @param Q_M_n Power users may wish to pass in their own properly formatted list of the
+#' mediator distributions so that nuisance parameters can be fitted outside 
+#' of \code{intermed}.
+#' @param gn Power users may wish to pass in their own properly formatted list of the
+#' propensity score so that
+#' nuisance parameters can be fitted outside of \code{intermed}.
+#' @param use_future A boolean indicating whether to use the \code{future} package 
+#' to parallelize computations
+#' @param cvFolds Number of cross-validation folds to use if CVTMLE and CV-one step are
+#' desired
+#' @param max_iter The maximum number of iterations for the TMLE
+#' @param verbose A boolean indicating whether to print status updates.
 #' @export
-
-# n <- 100
-# C <- data.frame(C1 = rbinom(n, 1, 0.5), C2 = runif(n))
-# A <- rbinom(n, 1, plogis(C$C2 - C$C1/2))
-# M1 <- rbinom(n, 3, plogis(C$C1 - C$C2 - A/2))
-# M2 <- rbinom(n, 3, plogis(C$C1 + C$C2/2 - A/2))
-# Y <- C$C1 + C$C2 + A + M1*M2 - M2*A + rnorm(n, 0, 1/2)
-
-# a <- 1
-# a_star <- 0
-# SL_Q <- c("SL.glm", "SL.mean")
-# SL_g <- c("SL.glm", "SL.mean")
-# SL_Q_M <- c("SL.glm", "SL.mean")
-# n_SL <- 2
-# cvFolds <- 2
-# tolg <- 1e-2
-# use_future <- FALSE
-# Qbar_n <- NULL
-# Q_M_n <- NULL
-# glm_Q_M <- NULL
-# gn <- NULL
-# parallel <- FALSE
-# stratify = FALSE
-# DeltaA = as.numeric(!is.na(A))
-# DeltaM = as.numeric(!is.na(M1))
-# # cvFolds <- 1
-# verbose = FALSE
-# return_models <- TRUE
-# library(SuperLearner)
-# tol = 1/(sqrt(length(Y)) * log(length(Y)))
+#' 
+#' @return An object of class \code{"intermed"}.
+#' \describe{
+#'  \item{\code{aiptw}}{A \code{list} of point estimates and
+#'        estimated covariance matrix from the one-step estimator}
+#'  \item{\code{tmle}}{A \code{list} of point estimates and
+#'        estimated covariance matrix from the TMLE}
+#'  \item{\code{plugin}}{Plugin estimates of the mediation effects}
+#'  \item{\code{fm}}{Fitted models if \code{return_models = TRUE}, \code{NULL} otherwise}
+#' }
 
 intermed <- function(Y, C, M1, M2, A, 
                      DeltaA = as.numeric(!is.na(A)),
@@ -61,7 +98,6 @@ intermed <- function(Y, C, M1, M2, A,
                      targeted_se = FALSE, 
                      return_models = FALSE, 
                      cvFolds = 1, 
-                     parallel = FALSE, 
                      use_future = FALSE, 
                      Qbar_n = NULL, 
                      Q_M_n = NULL,
@@ -92,44 +128,10 @@ intermed <- function(Y, C, M1, M2, A,
         valid_rows <- rep(valid_rows, n_SL)
     }
 
-    if (!parallel) {
-    	if(use_future){
-        	future::plan(future::transparent)
-    	}
-    }else {
-        doFuture::registerDoFuture()
-        if (all(c("sequential", "uniprocess") %in% class(future::plan())) & 
-            is.null(future_hpc)) {
-            future::plan(future::multiprocess)
-        }
-        else if (!is.null(future_hpc)) {
-            if (future_hpc == "batchtools_torque") {
-                future::plan(future.batchtools::batchtools_torque)
-            }
-            else if (future_hpc == "batchtools_slurm") {
-                future::plan(future.batchtools::batchtools_slurm)
-            }
-            else if (future_hpc == "batchtools_sge") {
-                future::plan(future.batchtools::batchtools_sge)
-            }
-            else if (future_hpc == "batchtools_lsf") {
-                future::plan(future.batchtools::batchtools_lsf)
-            }
-            else if (future_hpc == "batchtools_openlava") {
-                future::plan(future.batchtools::batchtools_openlava)
-            }
-            else {
-                stop("The currently specified HPC backend is not (yet) available.")
-            }
-        }
-    }
-
     if (is.null(gn)) {
         if (use_future) {
-        	#! TO DO: Will probably want to include own version of estimateG
-        	# that knows to look for DeltaM entry rather than a DeltaY entry
-            gnOut <- future.apply::future_lapply(X = valid_rows, 
-                FUN = drtmle:::estimateG, A = A, W = C, DeltaA = DeltaA, 
+              gnOut <- future.apply::future_lapply(X = valid_rows, 
+                FUN = estimateG, A = A, W = C, DeltaA = DeltaA, 
                 DeltaY = DeltaM, tolg = tolg, verbose = verbose, 
                 stratify = stratify, returnModels = return_models, 
                 SL_g = SL_g, glm_g = glm_g, a_0 = a_0)
@@ -140,8 +142,9 @@ intermed <- function(Y, C, M1, M2, A,
                 verbose = verbose, stratify = stratify, returnModels = return_models, 
                 SL_g = SL_g, glm_g = glm_g, a_0 = a_0)
         }
-        gn <- reorder_list(gnOut, a_0 = a_0, valid_rows = valid_rows, n_SL = n_SL, n = n,
-                           which_nuisance = "PS")
+        gn <- gnOut[[1]]$est
+        #reorder_list(gnOut, a_0 = a_0, valid_rows = valid_rows, n_SL = n_SL, n = n,
+        #                  which_nuisance = "PS")
         gnMod <- drtmle:::extract_models(gnOut)
     }else {
         gn <- lapply(gn, function(g) {
@@ -360,12 +363,14 @@ ci <- function(...) {
   UseMethod("ci")
 }
 
+#' Confidence intervals for interventional mediation effects
+#' 
 #' @param object An object of class \code{"intermed"}
 #' @param est The estimate to obtain CI around. Options are \code{"tmle"} and \code{"aiptw"}
 #' @param level Level of the confidence interval
 #' @param ... Other options (ignored)
 #' @export
-ci.intermed <- function(object, est = "tmle", level = 0.95, ...){
+ci.intermed <- function(object, est = "aiptw", level = 0.95, ...){
   out <- vector(mode = "list", length = length(est))
   names(out) <- est
   for (i in seq_along(est)) {
@@ -382,14 +387,14 @@ ci.intermed <- function(object, est = "tmle", level = 0.95, ...){
   return(out)
 }
 
-#' For printing 
+#' Print the AIPTW results 
 #' @export
 #' @method print intermed
 
 print.intermed <- function(x, ...) {
   tmp <- list(
-    est = cbind(x$tmle$est),
-    cov = x$tmle$cov
+    est = cbind(x$aiptw$est),
+    cov = x$aiptw$cov
   )
   row.names(tmp$est) <- c("Total", "Direct", "Indirect M1", "Indirect M2", "Covar. M1/M2")
   colnames(tmp$est) <- ""

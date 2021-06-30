@@ -1,14 +1,15 @@
-#' Function to target the outcome regression
+#' Target the outcome regression
 #' 
-#' @param Y the outcome
-#' @param A the observed treatment
-#' @param Qbar_n The n-length list created as a result of the outcome
-#' regression estimation routine
-#' @param gn The 2-length list created as a result of the propensity 
-#' score estimation routine
-#' @param Q_M_n The n-length list created as a result of the mediator
-#' distribution estimation routine
+#' @inheritParams intermed
 #' 
+#' @param all_mediator_values Grid of all combinations of M1 and M2
+#' @param which_effects Which effects to include in the targeted of the outcome regression
+#' @param bound_pred Should predictions be bounded?
+#' @param epsilon_threshold To avoid extreme values of fluctuation parameters (indicating 
+#' likely numerical instability), we truncate the value this parameter can take.
+#' @return A list containing all outcome regression evaluations needed
+#' for downstream calculations.
+
 target_Qbar <- function(Y, A, M1, M2, a, a_star,
                         all_mediator_values,
                         Qbar_n,
@@ -18,10 +19,6 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
                         bound_pred = FALSE, 
                         epsilon_threshold = 5, # truncate large epsilon values
                         ...){
-	# if(!all(Y %in% c(0,1)) & bound_pred){
-	# 	stop("Bounding targeted estimates by initial estimates may only work for binary outcomes")
-	# }
-	##~~~~~##!!!!!! NEED TO CHECK THIS FUNCTION AGAIN!!!!
 	# create clever covariates
 	# I(A_i = a)/g(a | C_i) * (Q_M1(M1_i | a, C_i) - Q_M1(M1_i | a_star, C_i)) * Q_M2(M2_i | a_star, C_i)/Q_{M1,M2}(M1_i, M2_i | a, C_i)
 	# I(A_i = a)/g(a | C_i) Q_{M1,M2}(M1_i, M2_i | a_star, C_i) / Q_{M1,M2}(M1_i, M2_i | a, C_i)
@@ -143,7 +140,7 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 
 	if(TRUE){
 		llik <- function(eps, data){
-			p <- plogis(data$scaled_offset + as.matrix(data[,1:num_covariates]) %*% eps)
+			p <- plogis(data$scaled_offset + as.matrix(data[,1]) %*% eps)
 			return(-sum(data$scaled_Y * log(p) + (1 - data$scaled_Y) * log(1 - p)))
 		}
 		# fluc_mod <- optim(par = rep(0, num_covariates), fn = llik, data = target_data)
@@ -151,7 +148,7 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 		# try doing it one by one
 		epsilon <- NULL
 		for(i in 1:num_covariates){			
-			fluc_modi <- optim(par = rep(0, num_covariates), fn = llik, data = target_data[,c(i,6,7)],
+			fluc_modi <- optim(par = rep(0, 1), fn = llik, data = target_data[,c(i,6,7)],
 			                   method = "Brent", lower = -10, upper = 10)
 			epsilon <- c(epsilon, fluc_modi$par)
 			target_data$scaled_offset <- target_data$scaled_offset + epsilon[i] * target_data[,i]
@@ -248,6 +245,17 @@ target_Qbar <- function(Y, A, M1, M2, a, a_star,
 	return(Qbar_n_tmle)
 }
 
+
+#' Target the iterated regressions
+#' 
+#' @inheritParams intermed
+#' @inheritParams target_Qbar
+#' 
+#' @param Qbar Outcome regression estimates
+#' @param Qbarbar Iterated mean estimates
+#' @return A list containing all outcome regression evaluations needed
+#' for downstream calculations.
+
 target_Qbarbar <- function(Qbar, Qbarbar, Y, A, a, a_star, gn, M1, M2,
                            all_mediator_values, max_iter, 
                            tol = 1/(sqrt(length(Y)) * log(length(Y)))){
@@ -293,7 +301,7 @@ target_Qbarbar <- function(Qbar, Qbarbar, Y, A, a, a_star, gn, M1, M2,
 #' There are two interesting features of this 
 #' targeting problem. First, we see that the nuisance parameter Qbarbar_M1_times_M2_star_a
 #' can be viewed in two ways: (1) the conditional mean of Qbarbar_M1_a given C with respect
-#' to the marginal of M_2 given A = a^\star, C; (2) the conditional mean of Qbarbar_M2_star_a given C 
+#' to the marginal of M_2 given A = a_star, C; (2) the conditional mean of Qbarbar_M2_star_a given C 
 #' with respect to the marginal of M_1 given A = a, C. The natural inclination then 
 #' is to use a sum loss function. It seems that we're able to do that here.
 #' However, to generate the proper score, we would need to 
@@ -305,13 +313,11 @@ target_Qbarbar <- function(Qbar, Qbarbar, Y, A, a, a_star, gn, M1, M2,
 #' Qbarbar_M2_star_a. We iterate until the empirical mean of this portion of the
 #' canonical gradient is smaller than \code{tol}. 
 #' 
-#' @param Qbarbar List of marginalized parameters 
-#' @param Y The outcome
-#' @param A The treatment
-#' @param a The comparison value of treatment
-#' @param a_star The referent value of treatment
-#' @param tol Tolerance for iterative TMLE 
-#' @param iterative Should iterative implementation be used?
+#' @inheritParams intermed
+#' @inheritParams target_Qbar
+#' @inheritParams target_Qbarbar
+#' @inheritParams target_Qbarbar_M1_times_M2_star_a
+#' 
 #' @importFrom SuperLearner trimLogit
 #' 
 target_Qbarbar_M1_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star, gn, 
@@ -414,13 +420,13 @@ target_Qbarbar_M1_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star, gn,
 #' with respect to the marginal of M_1 given A = a, C. The natural inclination then 
 #' is to use a sum loss function, which it seems we can do here. 
 #' 
-#' @param Qbarbar List of marginalized parameters 
-#' @param Y The outcome
-#' @param A The treatment
-#' @param a The comparison value of treatment
-#' @param a_star The referent value of treatment
-#' @param tol Tolerance for iterative TMLE 
-#' 
+#' @inheritParams intermed
+#' @inheritParams target_Qbar
+#' @inheritParams target_Qbarbar
+#' @inheritParams target_Qbarbar_M1_times_M2_star_a
+#' @inheritParams intermed
+#' @inheritParams target_Qbar
+#' @inheritParams target_Qbarbar
 #' @importFrom SuperLearner trimLogit
 #' 
 target_Qbarbar_M1_times_M2_a <- function(Qbarbar, Y, A, a, a_star, gn, 
@@ -528,14 +534,10 @@ target_Qbarbar_M1_times_M2_a <- function(Qbarbar, Y, A, a, a_star, gn,
 #' loss approach, so long as the IPTW are incorporated into the loss function. We make
 #' two copies of each observation with A = a_star; assign Qbarbar_M1_star_a as outcome in
 #' half and Qbarbar_M2_star_a in the other half; then do one-shot targeting
-#' 
-#' @param Qbarbar List of marginalized parameters 
-#' @param Y The outcome
-#' @param A The treatment
-#' @param a The comparison value of treatment
-#' @param a_star The referent value of treatment
-#' @param tol Tolerance for iterative TMLE 
-#' 
+#' @inheritParams intermed
+#' @inheritParams target_Qbar
+#' @inheritParams target_Qbarbar
+#' @inheritParams target_Qbarbar_M1_times_M2_star_a
 #' @importFrom SuperLearner trimLogit
 #' 
 target_Qbarbar_M1_star_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star, gn,
@@ -592,11 +594,10 @@ target_Qbarbar_M1_star_times_M2_star_a <- function(Qbarbar, Y, A, a, a_star, gn,
 #' and Qbar_a_star with respect to the joint distribution of M1 and M2 given C and A = a_star. 
 #' We can then define a submodel through this conditional mean difference (which is 
 #' exactly the conditional direct effect) and target this quantity directly. 
-#' @param Y The outcome
-#' @param A The treatment
-#' @param a The comparison value of treatment
-#' @param a_star The referent value of treatment
-#' @param tol Tolerance for iterative TMLE 
+#' @inheritParams intermed
+#' @inheritParams target_Qbar
+#' @inheritParams target_Qbarbar
+#' @inheritParams target_Qbarbar_M1_times_M2_star_a
 
 target_conditional_direct_effect <- function(Qbarbar, all_mediator_values, gn,
                                              Qbar, # should come in as TMLE
@@ -753,10 +754,10 @@ target_conditional_direct_effect <- function(Qbarbar, all_mediator_values, gn,
 #' and Qbar_a_star with respect to the joint distribution of M1 and M2 given C and A.
 #' We can then define a submodel through this conditional mean difference (which is 
 #' exactly the conditional total effect) and target this quantity directly. 
-#' @param Y The outcome
-#' @param A The treatment
-#' @param a The comparison value of treatment
-#' @param a_star The referent value of treatment
+#' @inheritParams intermed
+#' @inheritParams target_Qbar
+#' @inheritParams target_Qbarbar
+#' @inheritParams target_Qbarbar_M1_times_M2_star_a
 
 target_conditional_total_effect <- function(Qbarbar, gn, 
                                             Qbar, # should come in as TMLE

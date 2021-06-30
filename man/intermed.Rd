@@ -2,7 +2,7 @@
 % Please edit documentation in R/tmle_intermed.R
 \name{intermed}
 \alias{intermed}
-\title{Function to compute TMLE of intervention effects}
+\title{AIPTW and TMLE estimates of interventional mediation effects}
 \usage{
 intermed(
   Y,
@@ -26,7 +26,6 @@ intermed(
   targeted_se = FALSE,
   return_models = FALSE,
   cvFolds = 1,
-  parallel = FALSE,
   use_future = FALSE,
   Qbar_n = NULL,
   Q_M_n = NULL,
@@ -38,26 +37,113 @@ intermed(
 )
 }
 \arguments{
-\item{Y}{outcome}
+\item{Y}{A vector of continuous or binary outcomes.}
 
-\item{C}{confounders}
+\item{C}{A \code{data.frame} of named covariates.}
 
-\item{M1}{first mediator}
+\item{M1}{A \code{vector} of mediators.}
 
-\item{M2}{second mediator}
+\item{M2}{A \code{vector} of mediators.}
 
-\item{A}{treatment}
+\item{A}{A vector of binary treatment assignment (assumed to be equal to 0 or
+1).}
 
-\item{a}{value of A of interest}
+\item{DeltaA}{Indicator of missing treatment (assumed to be equal to 0 if
+missing 1 if observed).}
 
-\item{a_star}{other value of A of interest}
+\item{DeltaM}{Indicator of missing outcome (assumed to be equal to 0 if
+missing 1 if observed).}
 
-\item{glm_Q_M}{A list with named element \code{M1} and \code{M2} describing the right-hand side
-of a GLM formula for, respectively, the conditional hazard of M1 given A (if stratify = FALSE),
-C, and M2 and the conditional hazard of M2 given A (if stratify = FALSE) and C. The formula's 
-can additionally include a variable named \code{bin_id}, which corresponds to the numeric bin number
-(i.e., this controls the level of smoothing over the range of \code{M1} and \code{M2}).}
+\item{a}{The label for the treatment. The effects estimates returned pertain
+to estimation of interventional effects of \code{a} versus \code{a_star}.}
+
+\item{a_star}{The label for the treatment. The effects estimates returned pertain
+to estimation of interventional effects of \code{a} versus \code{a_star}.}
+
+\item{SL_Qbar}{A vector of characters or a list describing the Super Learner
+library to be used for the outcome regression.}
+
+\item{SL_g}{A vector of characters or a list describing the Super Learner
+library to be used for the propensity score.}
+
+\item{SL_Q_M}{A list with two named entries \code{M1} and \code{M2}, specifying
+super learner libraries for estimation of the pooled hazard regression that is
+mapped into an estimate of the mediator distributions.}
+
+\item{n_SL}{The number of repeated super learner runs to execute for each
+regression.}
+
+\item{glm_Qbar}{A character describing a formula to be used in the call to
+ \code{glm} for the outcome regression. The formula may include \code{colnames(C)},
+\code{"A"} (if \code{stratify = FALSE}), \code{"M1"}, and \code{"M2"} as terms in 
+the formula.}
+
+\item{glm_g}{A character describing a formula to be used in the call to
+\code{glm} for the outcome regression. The formula may include \code{colnames(C)},
+in the formula.}
+
+\item{glm_Q_M}{A list with two named entries \code{M1} and \code{M2}, specifying
+ the regression formula for estimation of the pooled hazard regression that is
+ mapped into an estimate of the mediator distributions. The formula for \code{M1}
+ can include \code{"A"} (if \code{stratify = FALSE}) and \code{colnames(C)}, 
+while the formula for \code{M2} can additionally include \code{M1}.}
+
+\item{tolg}{The truncation level for the propensity score}
+
+\item{tol}{The tolerance for stopping the iterative targeting procedure.}
+
+\item{targeted_se}{A boolean indicating whether to return the standard error estimates
+based on targeted nuisance parameters or the initial estimates of nuisance parameters.}
+
+\item{return_models}{A boolean indicating whether to return the fitted models for 
+each of the nuisance regressions. If \code{TRUE} then the output will include a list 
+with named entries \code{g} (propensity score fit), \code{Qbar} (outcome regression fit),
+and \code{Q_M} (mediator distribution fits).}
+
+\item{cvFolds}{Number of cross-validation folds to use if CVTMLE and CV-one step are
+desired}
+
+\item{use_future}{A boolean indicating whether to use the \code{future} package 
+to parallelize computations}
+
+\item{Qbar_n}{Power users may wish to pass in their own properly formatted list of the
+outcome regression so that
+nuisance parameters can be fitted outside of \code{intermed}.}
+
+\item{Q_M_n}{Power users may wish to pass in their own properly formatted list of the
+mediator distributions so that nuisance parameters can be fitted outside 
+of \code{intermed}.}
+
+\item{gn}{Power users may wish to pass in their own properly formatted list of the
+propensity score so that
+nuisance parameters can be fitted outside of \code{intermed}.}
+
+\item{max_iter}{The maximum number of iterations for the TMLE}
+
+\item{verbose}{A boolean indicating whether to print status updates.}
+
+\item{all_mediator_values}{All combinations of M1 and M2}
+}
+\value{
+An object of class \code{"intermed"}.
+\describe{
+ \item{\code{aiptw}}{A \code{list} of point estimates and
+       estimated covariance matrix from the one-step estimator}
+ \item{\code{tmle}}{A \code{list} of point estimates and
+       estimated covariance matrix from the TMLE}
+ \item{\code{plugin}}{Plugin estimates of the mediation effects}
+ \item{\code{fm}}{Fitted models if \code{return_models = TRUE}, \code{NULL} otherwise}
+}
 }
 \description{
-Function to compute TMLE of intervention effects
+This function computes multiply robust estimates of interventional mediation
+effects with two mediators. Two such estimates are produced, an augmented
+inverse probability of treatment weighted (AIPTW) estimator and a targeted minimum loss
+estimator (TMLE). The AIPTW was found to perform better in most simulations.
+}
+\details{
+Under the hood, the function fits several nuisance regressions and combines them
+into the final estimate. Users have several options for fitting these regressions
+as described below. In particular, \code{SuperLearner} can be used to flexibly 
+estimate the regressions.
 }

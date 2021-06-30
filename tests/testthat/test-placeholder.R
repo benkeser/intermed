@@ -1,9 +1,8 @@
 library(intermed)
 library(SuperLearner)
-library(np)
 library(testthat)
 
-# TO DO: Add tests for multiple treatment levels
+# TO DO: Add tests 
 context("Testing ...")
 test_that("...", {
   set.seed(123456)

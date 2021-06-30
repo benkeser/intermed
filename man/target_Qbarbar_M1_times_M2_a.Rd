@@ -18,17 +18,26 @@ target_Qbarbar_M1_times_M2_a(
 )
 }
 \arguments{
-\item{Qbarbar}{List of marginalized parameters}
+\item{Qbarbar}{Iterated mean estimates}
 
-\item{Y}{The outcome}
+\item{Y}{A vector of continuous or binary outcomes.}
 
-\item{A}{The treatment}
+\item{A}{A vector of binary treatment assignment (assumed to be equal to 0 or
+1).}
 
-\item{a}{The comparison value of treatment}
+\item{a}{The label for the treatment. The effects estimates returned pertain
+to estimation of interventional effects of \code{a} versus \code{a_star}.}
 
-\item{a_star}{The referent value of treatment}
+\item{a_star}{The label for the treatment. The effects estimates returned pertain
+to estimation of interventional effects of \code{a} versus \code{a_star}.}
 
-\item{tol}{Tolerance for iterative TMLE}
+\item{gn}{Power users may wish to pass in their own properly formatted list of the
+propensity score so that
+nuisance parameters can be fitted outside of \code{intermed}.}
+
+\item{tol}{The tolerance for stopping the iterative targeting procedure.}
+
+\item{max_iter}{The maximum number of iterations for the TMLE}
 }
 \description{
 There are two interesting features of this 

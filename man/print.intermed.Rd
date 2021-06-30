@@ -2,10 +2,10 @@
 % Please edit documentation in R/tmle_intermed.R
 \name{print.intermed}
 \alias{print.intermed}
-\title{For printing}
+\title{Print the AIPTW results}
 \usage{
 \method{print}{intermed}(x, ...)
 }
 \description{
-For printing
+Print the AIPTW results
 }

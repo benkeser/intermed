@@ -31,15 +31,37 @@ target_conditional_direct_effect(
 )
 }
 \arguments{
-\item{Y}{The outcome}
+\item{Qbarbar}{Iterated mean estimates}
 
-\item{A}{The treatment}
+\item{all_mediator_values}{All combinations of M1 and M2}
 
-\item{a}{The comparison value of treatment}
+\item{gn}{Power users may wish to pass in their own properly formatted list of the
+propensity score so that
+nuisance parameters can be fitted outside of \code{intermed}.}
 
-\item{a_star}{The referent value of treatment}
+\item{Qbar}{Outcome regression estimates}
 
-\item{tol}{Tolerance for iterative TMLE}
+\item{Y}{A vector of continuous or binary outcomes.}
+
+\item{A}{A vector of binary treatment assignment (assumed to be equal to 0 or
+1).}
+
+\item{a}{The label for the treatment. The effects estimates returned pertain
+to estimation of interventional effects of \code{a} versus \code{a_star}.}
+
+\item{a_star}{The label for the treatment. The effects estimates returned pertain
+to estimation of interventional effects of \code{a} versus \code{a_star}.}
+
+\item{M1}{A \code{vector} of mediators.}
+
+\item{M2}{A \code{vector} of mediators.}
+
+\item{epsilon_threshold}{To avoid extreme values of fluctuation parameters (indicating 
+likely numerical instability), we truncate the value this parameter can take.}
+
+\item{bound_pred}{Should predictions be bounded?}
+
+\item{max_iter}{The maximum number of iterations for the TMLE}
 }
 \description{
 The naming convention is a bit different here, because we're actually
