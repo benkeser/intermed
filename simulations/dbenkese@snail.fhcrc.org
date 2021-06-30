@@ -1,0 +1,343 @@
+#! /usr/bin/env Rscript
+
+# get environment variables
+MYSCRATCH <- Sys.getenv('MYSCRATCH')
+RESULTDIR <- Sys.getenv('RESULTDIR')
+STEPSIZE <- as.numeric(Sys.getenv('STEPSIZE'))
+TASKID <- as.numeric(Sys.getenv('SLURM_ARRAY_TASK_ID'))
+
+# set defaults if nothing comes from environment variables
+MYSCRATCH[is.na(MYSCRATCH)] <- '.'
+RESULTDIR[is.na(RESULTDIR)] <- '.'
+STEPSIZE[is.na(STEPSIZE)] <- 1
+TASKID[is.na(TASKID)] <- 0
+
+# get command lines arguments
+args <- commandArgs(trailingOnly = TRUE)
+if(length(args) < 1){
+  stop("Not enough arguments. Please use args 'listsize', 'prepare', 'run <itemsize>' or 'merge'")
+}
+# "ad5e498072e08810dfb9db84602ee51348db11ef"
+# parameters
+ns <- c(500, 1000, 2000, 4000, 6000)
+seed <- 1:1000
+parm <- expand.grid(n = ns, seed = seed)
+
+# save directory
+save_dir <- "~/intermed/out/"
+code_dir <- "~/intermed/"
+# save_dir <- "~/Dropbox/R/supereff/"
+
+# load packages
+library(SuperLearner)
+library(intermed)
+
+make_data <- function(n){
+  C <- data.frame(C1 = runif(n), C2 = runif(n))
+  g0 <- plogis(-1 + C$C1 + C$C2)
+  A <- rbinom(n, 1, g0)
+  # A increases values of M1 and M2
+  success_prob_M1 <- plogis(-1 + C$C1 + 1.5 * A)
+  success_prob_M2 <- plogis(-1 + C$C1 + 0.5 * A)
+
+  # probably should switch this to geometric distribution, so that we 
+  # can be sure that we are nailing the mediator distribution estimation
+  M1 <- rgeom(n, success_prob_M1)
+  M2 <- rgeom(n, success_prob_M2)
+  M1[M1 > 4] <- 5
+  M2[M2 > 4] <- 5
+  # higher values of M1 and M2 lead to higher probability that Y = 1
+  Qbar0 <- plogis(-1 + C$C1 - C$C2 + 0.5 * M1 + 0.5 * M2 + A)
+
+  Y <- rbinom(n, 1, Qbar0)
+  return(list(C = C, A = A, M1 = M1, M2 = M2, Y = Y))
+}
+
+get_truth <- function(big_n = 1e6){
+
+  C <- data.frame(C1 = runif(big_n), C2 = runif(big_n))
+
+  success_prob_M1_A0 <- plogis(-1 + C$C1 + 1.5 * 0)
+  success_prob_M2_A0 <- plogis(-1 + C$C1 + 0.5 * 0)
+
+  success_prob_M1_A1 <- plogis(-1 + C$C1 + 1.5 * 1)
+  success_prob_M2_A1 <- plogis(-1 + C$C1 + 0.5 * 1)
+
+  M1_A0 <- rgeom(big_n, success_prob_M1_A0)
+  M2_A0 <- rgeom(big_n, success_prob_M2_A0)
+  M1_A1 <- rgeom(big_n, success_prob_M1_A1)
+  M2_A1 <- rgeom(big_n, success_prob_M2_A1)
+
+  M1_A0[M1_A0 > 4] <- 5
+  M2_A0[M2_A0 > 4] <- 5
+  M1_A1[M1_A1 > 4] <- 5
+  M2_A1[M2_A1 > 4] <- 5
+
+  # total effect
+  Qbar0_A1 <- plogis(-1 + C$C1 - C$C2 + 0.5 * M1_A1 + 0.5 * M2_A1 + 1)
+  Qbar0_A0 <- plogis(-1 + C$C1 - C$C2 + 0.5 * M1_A0 + 0.5 * M2_A0 + 0)
+  total_effect <- mean(Qbar0_A1 - Qbar0_A0)
+
+  # direct effect 
+  Qbar0_A1 <- plogis(-1 + C$C1 - C$C2 + 0.5 * M1_A0 + 0.5 * M2_A0 + 1)
+  Qbar0_A0 <- plogis(-1 + C$C1 - C$C2 + 0.5 * M1_A0 + 0.5 * M2_A0 + 0)
+  direct_effect <- mean(Qbar0_A1 - Qbar0_A0)
+
+  # indirect effect through M1
+  Qbar0_A1 <- plogis(-1 + C$C1 - C$C2 + 0.5 * M1_A1 + 0.5 * M2_A0 + 1)
+  Qbar0_A0 <- plogis(-1 + C$C1 - C$C2 + 0.5 * M1_A0 + 0.5 * M2_A0 + 1)
+  indirect_effect_M1 <- mean(Qbar0_A1 - Qbar0_A0)
+
+  # indirect effect through M2
+  Qbar0_A1 <- plogis(-1 + C$C1 - C$C2 + 0.5 * M1_A0 + 0.5 * M2_A1 + 1)
+  Qbar0_A0 <- plogis(-1 + C$C1 - C$C2 + 0.5 * M1_A0 + 0.5 * M2_A0 + 1)
+  indirect_effect_M2 <- mean(Qbar0_A1 - Qbar0_A0)
+
+  return(list(total = total_effect,
+        direct = direct_effect,
+        indirect_M1 = indirect_effect_M1, 
+        indirect_M2 = indirect_effect_M2))
+}
+
+# functions to compute to use truth as estimators
+SL_Qbar_true <- function(...){
+  fit <- list(NULL)
+  class(fit) <- "SL_Qbar_true"
+  return(list(fit = fit, pred = NULL))
+}
+
+predict.SL_Qbar_true <- function(object, newdata, ...){
+  plogis(-1 + newdata$C1 - newdata$C2 + 0.5 * newdata$M1 + 0.5 * newdata$M2 + newdata$A)
+}
+
+SL_Q_M1_true <- function(...){
+  fit <- list(NULL)
+  class(fit) <- "SL_Q_M1_true"
+  return(list(fit = fit, pred = NULL)) 
+}
+SL_Q_M2_true <- function(...){
+  fit <- list(NULL)
+  class(fit) <- "SL_Q_M2_true"
+  return(list(fit = fit, pred = NULL)) 
+}
+
+predict.SL_Q_M1_true <- function(object, newdata, ...){
+  plogis(-1 + newdata$C1 + 1.5 * newdata$A)
+}
+
+predict.SL_Q_M2_true <- function(object, newdata, ...){
+  plogis(-1 + newdata$C1 + 0.5 * newdata$A)
+}
+
+SL_g_true <- function(newX, ...){
+  fit <- list(NULL)
+  class(fit) <- "SL_g_true"
+  return(list(fit = fit, pred = 1 - plogis(-1 + newX$C1 + newX$C2))) 
+}
+
+predict.SL_g_true <- function(object, newdata, ...){
+  1 - plogis(-1 + newdata$C1 + newdata$C2)
+}
+
+# get the list size #########
+if (args[1] == 'listsize') {
+  cat(nrow(parm))
+}
+
+# execute prepare job ##################
+if (args[1] == 'prepare') {
+  print(paste0('initial datasets saved to: ~/drinf/scratch/dataList ... .RData'))
+}
+
+# execute parallel job #################################################
+if (args[1] == 'run') {
+  if (length(args) < 2) {
+    stop("Not enough arguments. 'run' needs a second argument 'id'")
+  }
+  id <- as.numeric(args[2])
+  print(paste(Sys.time(), "arrid:" , id, "TASKID:",
+              TASKID, "STEPSIZE:", STEPSIZE))
+  for (i in (id+TASKID):(id+TASKID+STEPSIZE-1)) {
+    print(paste(Sys.time(), "i:" , i))
+    print(parm[i,])
+    
+    # set seed
+    set.seed(parm$seed[i])
+
+    # make data
+    data <- make_data(n = parm$n[i])
+
+    rslt <- intermed(Y = data$Y, C = data$C, M1 = data$M1, M2 = data$M2, A = data$A, 
+                     a = 1, 
+                     a_star = 0,
+                     n_SL = 1,
+                     SL_Qbar = "SL_Qbar_true", 
+                     SL_g = "SL_g_true",
+                     SL_Q_M = list(M1 = "SL_Q_M1_true", M2 = "SL_Q_M2_true"),
+                     tolg = 1e-3, 
+                     targeted_se = FALSE, 
+                     return_models = FALSE,
+                     verbose = FALSE,
+                     stratify = FALSE,
+                     max_iter = 10)
+
+    # get truth
+    set.seed(1234)
+    truth <- c(unlist(get_truth()), 0)
+
+    # get confidence intervals
+    all_ci <- ci(rslt, est = c("tmle", "aiptw"))
+    
+    # check for truth in CIs
+    in_ci <- function(truth, ci){
+      truth > min(ci) & truth < max(ci)
+    }
+    tmle_cover <- aiptw_cover <- rep(NA, 5)
+    for(j in seq_len(5)){
+      tmle_cover[j] <- in_ci(truth[j], all_ci$tmle[j, c(2,3)])
+      aiptw_cover[j] <- in_ci(truth[j], all_ci$aiptw[j, c(2,3)])
+    }
+    out <- c(parm$n[i], parm$seed[i], t(all_ci$tmle), t(all_ci$aiptw), tmle_cover, aiptw_cover,
+             truth)
+    names(out) <- c("n", "seed", 
+                    "total_tmle_est", "total_tmle_cil", "total_tmle_ciu",
+                    "direct_tmle_est","direct_tmle_cil","direct_tmle_ciu",
+                    "indirectM1_tmle_est","indirectM1_tmle_cil","indirectM1_tmle_ciu",
+                    "indirectM2_tmle_est","indirectM2_tmle_cil","indirectM2_tmle_ciu",
+                    "covarM1M2_tmle_est","covarM1M2_tmle_cil","covarM1M2_tmle_ciu",
+                    "total_aiptw_est", "total_aiptw_cil", "total_aiptw_ciu",
+                    "direct_aiptw_est","direct_aiptw_cil","direct_aiptw_ciu",
+                    "indirectM1_aiptw_est","indirectM1_aiptw_cil","indirectM1_aiptw_ciu",
+                    "indirectM2_aiptw_est","indirectM2_aiptw_cil","indirectM2_aiptw_ciu",
+                    "covarM1M2_aiptw_est","covarM1M2_aiptw_cil","covarM1M2_aiptw_ciu",
+                    "total_tmle_cover", "direct_tmle_cover", "indirectM1_tmle_cover", "indirectM2_tmle_cover", "covarM1M2_tmle_cover",
+                    "total_aiptw_cover", "direct_aiptw_cover", "indirectM1_aiptw_cover", "indirectM2_aiptw_cover", "covarM1M2_aiptw_cover",
+                    "true_total", "true_direct", "true_indirectM1", "true_indirectM2", "true_covarM1M2"
+                    )
+    save(out, file = paste0("~/intermed/out/fit_", i, ".RData"))
+  }
+}
+
+# merge job ###########################
+if (args[1] == 'merge') {   
+  # parameters
+  ns <- c(500, 1000, 2000, 4000, 6000)
+  seed <- 1:1000
+  parm <- expand.grid(n = ns, seed = seed)
+
+  save_dir <- "~/intermed/out/"
+  n_out <- 47
+  
+  rslt <- matrix(NA, nrow = nrow(parm), ncol = n_out)
+  for(i in 1:nrow(parm)){
+    tmp <- tryCatch({
+      load(paste0(save_dir, "fit_", i, ".RData"))
+      out
+    }, error = function(e){
+      rep(NA, n_out)
+    })
+    rslt[i, ] <- tmp
+  }
+
+  out <- data.frame(rslt)
+  colnames(out) <- c("n", "seed", 
+                    "total_tmle_est", "total_tmle_cil", "total_tmle_ciu",
+                    "direct_tmle_est","direct_tmle_cil","direct_tmle_ciu",
+                    "indirectM1_tmle_est","indirectM1_tmle_cil","indirectM1_tmle_ciu",
+                    "indirectM2_tmle_est","indirectM2_tmle_cil","indirectM2_tmle_ciu",
+                    "covarM1M2_tmle_est","covarM1M2_tmle_cil","covarM1M2_tmle_ciu",
+                    "total_aiptw_est", "total_aiptw_cil", "total_aiptw_ciu",
+                    "direct_aiptw_est","direct_aiptw_cil","direct_aiptw_ciu",
+                    "indirectM1_aiptw_est","indirectM1_aiptw_cil","indirectM1_aiptw_ciu",
+                    "indirectM2_aiptw_est","indirectM2_aiptw_cil","indirectM2_aiptw_ciu",
+                    "covarM1M2_aiptw_est","covarM1M2_aiptw_cil","covarM1M2_aiptw_ciu",
+                    "total_tmle_cover", "direct_tmle_cover", "indirectM1_tmle_cover", "indirectM2_tmle_cover", "covarM1M2_tmle_cover",
+                    "total_aiptw_cover", "direct_aiptw_cover", "indirectM1_aiptw_cover", "indirectM2_aiptw_cover", "covarM1M2_aiptw_cover",
+                    "truth_total", "truth_direct", "truth_indirectM1", "truth_indirectM2", "truth_covarM1M2"
+                    )
+
+  save(out, file = "~/intermed/all_out_intermed.RData")
+
+  get_bias <- function(out, which_eff = "total"){
+    by(out, out$n, function(x){
+      tmle <- mean(x[ , grep(paste0(which_eff, "_tmle_est"), colnames(x))] - x[,paste0("truth_", which_eff)], na.rm = TRUE)
+      aiptw <- mean(x[ , grep(paste0(which_eff, "_aiptw_est"), colnames(x))] - x[,paste0("truth_", which_eff)], na.rm = TRUE)
+      return(c(tmle, aiptw))
+    })
+  }
+
+  get_sd <- function(out, which_eff = "total"){
+    by(out, out$n, function(x){
+      tmle <- sd(x[ , grep(paste0(which_eff, "_tmle_est"), colnames(x))], na.rm = TRUE)
+      aiptw <- sd(x[ , grep(paste0(which_eff, "_aiptw_est"), colnames(x))] , na.rm = TRUE)
+      return(c(tmle, aiptw))
+    })
+  }
+  get_se_est <- function(out, which_eff = "total"){
+    by(out, out$n, function(x){
+      tmle <- mean(x[ , grep(paste0(which_eff, "_tmle_ciu"), colnames(x))] - x[ , grep(paste0(which_eff, "_tmle_cil"), colnames(x))]) / (2 * 1.96)
+      aiptw <- mean(x[ , grep(paste0(which_eff, "_aiptw_ciu"), colnames(x))] - x[ , grep(paste0(which_eff, "_aiptw_cil"), colnames(x))]) / (2 * 1.96)
+      return(c(tmle, aiptw))
+    })
+  }
+  get_cover <- function(out, which_eff = "total"){
+    by(out, out$n, function(x){
+      tmle <- mean(x[ , grep(paste0(which_eff, "_tmle_cover"), colnames(x))], na.rm = TRUE)
+      aiptw <- mean(x[ , grep(paste0(which_eff, "_aiptw_cover"), colnames(x))], na.rm = TRUE)
+      return(c(tmle, aiptw))
+    })
+  }
+
+  get_bias(out, which_eff = "total")
+  get_bias(out, which_eff = "direct")
+  get_bias(out, which_eff = "indirectM1")
+  get_bias(out, which_eff = "indirectM2")
+  get_bias(out, which_eff = "covarM1M2")
+
+  get_cover(out, which_eff = "total")
+  get_cover(out, which_eff = "direct")
+  get_cover(out, which_eff = "indirectM1")
+  get_cover(out, which_eff = "indirectM2")
+  get_cover(out, which_eff = "covarM1M2")
+
+  get_se_est(out, which_eff = "total")
+  get_se_est(out, which_eff = "direct")
+  get_se_est(out, which_eff = "indirectM1")
+  get_se_est(out, which_eff = "indirectM2")
+  get_se_est(out, which_eff = "covarM1M2")
+  
+  get_sd(out, which_eff = "total")
+  get_sd(out, which_eff = "direct")
+  get_sd(out, which_eff = "indirectM1")
+  get_sd(out, which_eff = "indirectM2")
+  get_sd(out, which_eff = "covarM1M2")
+
+
+  # compare sd to mean se
+  a <- Reduce("rbind", get_se_est(out, which_eff = "indirectM1"))
+  b <- Reduce("rbind", get_sd(out, which_eff = "indirectM2"))
+  # > 1 => conservative
+  a / b 
+
+
+  # check oracle CI coverage
+  check_oracle_ci <- function(out, which_est = "total"){
+    oracle_se_tmle <- sd(out[, paste0(which_est, "_tmle_est")], na.rm = TRUE)
+    oracle_se_aiptw <- sd(out[, paste0(which_est, "_aiptw_est")], na.rm = TRUE)
+    tmle_cil <- out[, paste0(which_est, "_tmle_est")] - 1.96 * oracle_se_tmle
+    tmle_ciu <- out[, paste0(which_est, "_tmle_est")] + 1.96 * oracle_se_tmle
+    aiptw_cil <- out[, paste0(which_est, "_aiptw_est")] - 1.96 * oracle_se_aiptw
+    aiptw_ciu <- out[, paste0(which_est, "_aiptw_est")] + 1.96 * oracle_se_aiptw
+    tmle_cover <- tmle_cil < out[, paste0("truth_", which_est)] & tmle_ciu > out[, paste0("truth_", which_est)]
+    aiptw_cover <- aiptw_cil < out[, paste0("truth_", which_est)] & aiptw_ciu > out[, paste0("truth_", which_est)]
+    return(c(mean(tmle_cover, na.rm = TRUE), mean(aiptw_cover, na.rm = TRUE)))
+  }
+
+  by(out, out$n, check_oracle_ci, which_est = "total")
+  by(out, out$n, check_oracle_ci, which_est = "direct")
+  by(out, out$n, check_oracle_ci, which_est = "indirectM1")
+  by(out, out$n, check_oracle_ci, which_est = "indirectM2")
+  by(out, out$n, check_oracle_ci, which_est = "covarM1M2")
+
+}
+
