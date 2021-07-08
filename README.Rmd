@@ -13,7 +13,8 @@ knitr::opts_chunk$set(
 # R/`intermed`
 
 [![Travis-CI Build Status](https://travis-ci.org/benkeser/intermed.svg?branch=master)](https://travis-ci.org/benkeser/intermed)
-[![AppVeyor Build  Status](https://ci.appveyor.com/api/projects/status/github/benkeser/intermed?branch=master&svg=true)](https://ci.appveyor.com/project/benkeser/intermed)
+[![AppVeyor Build  Status](https://ci.appveyor.com/api/projects/
+tus/github/benkeser/intermed?branch=master&svg=true)](https://ci.appveyor.com/project/benkeser/intermed)
 [![Coverage Status](https://img.shields.io/codecov/c/github/benkeser/intermed/master.svg)](https://codecov.io/github/benkeser/intermed?branch=master)
 [![CRAN](http://www.r-pkg.org/badges/version/intermed)](http://www.r-pkg.org/pkg/intermed)
 [![CRAN downloads](https://cranlogs.r-pkg.org/badges/intermed)](https://CRAN.R-project.org/package=intermed)

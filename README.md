@@ -19,7 +19,7 @@ license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://openso
 
 > Nonparametric estimators of mediation effects with multiple mediators
 
-**Author:** [David Benkeser](https://www.benkeserstatistics.com/)
+**Author:** [David Benkeser](https://www.davidbphd.com/)
 
 ------------------------------------------------------------------------
 
